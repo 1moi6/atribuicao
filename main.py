@@ -3,6 +3,7 @@ import os
 import home
 import sistema
 import componente
+import pandas as pd
 st.set_page_config(page_title="Otimizando a distribuição", page_icon="./assets/images/ialogo2.png",initial_sidebar_state="collapsed")
 
 # st.logo("./assets/images/ialogo.png", icon_image="./assets/images/ialogo2.png")
@@ -12,6 +13,13 @@ base_path = os.path.dirname(os.path.abspath(__file__))
 
 if 'page' not in st.session_state:
     st.session_state['page'] = "home"
+
+
+if 'disciplinas' not in st.session_state:
+    st.session_state['disciplinas'] = pd.DataFrame()
+
+if 'professores' not in st.session_state:
+    st.session_state['professores'] = pd.DataFrame()
 
 def load_css(file_name: str):
     """Função para carregar CSS externo e aplicá-lo no Streamlit."""
@@ -30,8 +38,6 @@ try:
     st.session_state['user_email'] = st.user.email
 except:
     pass
-
-print(st.session_state.get('page', False))
 
 
 
