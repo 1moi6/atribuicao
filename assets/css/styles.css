@@ -1,0 +1,80 @@
+header {visibility: hidden;}
+.main {
+    .block-container {    
+        padding-top: 0rem;
+        padding-bottom: 0;
+        padding-left: 0;
+        padding-right: 0;
+        max-width: 100%;
+    }
+}
+
+.stMainBlockContainer {
+    padding-top: 0rem;
+    padding-bottom: 0;
+    padding-left: 10;
+    padding-right: 10;
+    max-width: 90%;
+}
+
+.stVerticalBlock {
+    gap: 1rem;
+}
+
+
+.user-container {
+    display: flex;
+    align-items: center;
+}
+.rounded-img {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    margin-right: 15px;
+    margin-bottom: 2px;
+    
+}
+.user-text {
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.title-text-wrapper {
+                width: 100%;
+                display: flex;
+                justify-content: center;
+                position: absolute;
+                top: 0px;
+                left: 0;
+            }
+.button-space {
+        margin-top: 2rem;
+    }
+.v-space {
+        margin-top: 0px;
+    }
+.title-text {
+    font-size: 1.5em;
+    font-weight: bold;
+    text-align: center;
+}
+
+.title-text-wrapper-left {
+                width: 100%;
+                display: flex;
+                justify-content: left;
+                position: absolute;
+                top: 0px;
+                left: 0;
+            }
+.button-space-px {
+        margin-top: 10px;
+    }
+/*.st-emotion-cache-1wvkpev{
+border: 0px solid #000;
+    }*/
+
+.v-space {
+        margin-top: 1px;
+    }
+                
