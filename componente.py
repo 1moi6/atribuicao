@@ -1,7 +1,7 @@
 import pandas as pd
 
 # Dias da semana sem sábado
-DAYS = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta']
+DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex']
 START_HOUR = 7
 END_HOUR = 23
 
@@ -18,11 +18,11 @@ time_slots = generate_time_slots()
 # Codificação fornecida: 2=segunda, 3=terça, ..., 6=sexta
 def decode_schedule(code):
     day_map = {
-        '2': 'Segunda',
-        '3': 'Terça',
-        '4': 'Quarta',
-        '5': 'Quinta',
-        '6': 'Sexta'
+        '2': 'Seg',
+        '3': 'Ter',
+        '4': 'Qua',
+        '5': 'Qui',
+        '6': 'Sex'
     }
 
     try:
@@ -65,7 +65,6 @@ def build_schedule_with_conflicts(df, professor_name, disciplina_simulada=None):
 
     df_prof = df[df["Professor(a)"] == professor_name].copy()
 
-    print(disciplina_simulada)
     # Se for simular uma nova disciplina, adiciona uma linha fictícia
     if disciplina_simulada is not None:
         simulated_row = {
