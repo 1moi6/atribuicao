@@ -86,8 +86,8 @@ def plot_schedule_altair(schedule_df, conflitos, disciplinas_map, professor_name
         color=alt.Color(
             'Aulas:O',
             scale=alt.Scale(
-                range=["#9c9c9c", "#ffffff", "#07519b", "#7d0404"],
-                domain=[-1, 0, 1, 2]
+                range=["#9c9c9c", "#ffffff", "#07519b", "#7d0404","#7d0404","#7d0404","#7d0404"],
+                domain=[-1, 0, 1, 2,3,4,5]
             ),
             legend=None
         ),
@@ -286,12 +286,15 @@ def run():
             cs1.button("Atribuir", use_container_width=True, on_click = alocadisciplina)
 
             grade, conflitos,mapa, vazio = build_schedule_with_conflicts(disciplinas, st.session_state['professor'],dis_sel)
+                
+            
+            if len(conflitos):
+                with cont_sis.expander("Conflitos de horários", expanded=False):
+                    st.markdown(f"**Conflitos de horários**")
+                    st.dataframe(conflitos)
             
             cont_sis.altair_chart(plot_schedule_altair(grade,conflitos,mapa, st.session_state['professor']), use_container_width=True)
             
-            # if len(conflitos):
-            #     cont3.markdown(f"**Conflitos de horários**")
-            #     cont3.dataframe(conflitos)
 
             # st.dataframe(disciplinas, use_container_width=True, hide_index=True,height=500)
 

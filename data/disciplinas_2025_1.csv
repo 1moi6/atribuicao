@@ -1,8 +1,8 @@
 Ordem,Curso,Disciplina,Horario,CH,Professor(a)
 1,Matemática,Álgebra Linear,21532/41532/61532,96,Carlos Antônio Dornellas
-2,Matemática,Análise na Reta,21332/41332,64,
-3,Matemática,Cálculo Diferencial e Integral I,21332/41332/61332,96,
-4,Matemática,Cálculo Diferencial e Integral II,21332/41332/61332,96,
+2,Matemática,Análise na Reta,21332/41332,64,Carlos Antônio Dornellas
+3,Matemática,Cálculo Diferencial e Integral I,21332/41332/61332,96,Carlos Antônio Dornellas
+4,Matemática,Cálculo Diferencial e Integral II,21332/41332/61332,96,Carlos Antônio Dornellas
 5,Matemática,Cálculo Diferencial e Integral III,21332/41332/61332,96,
 6,Matemática,Cálculo Numérico,21332/41332,64,
 7,Matemática,Construções Geométricas,31532,32,
