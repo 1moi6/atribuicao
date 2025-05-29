@@ -1,4 +1,6 @@
 import pandas as pd
+from itertools import combinations
+import altair as alt
 
 # Dias da semana sem sábado
 DAYS = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex']
@@ -63,6 +65,11 @@ def build_schedule_with_conflicts(df, professor_name, disciplina_simulada=None):
     schedule = pd.DataFrame(0, index=time_slots, columns=DAYS)
     disciplinas_map = { (dia, hora): [] for dia in DAYS for hora in time_slots }
 
+    pausas = ['11:30', '12:00', '12:30', '13:00', '17:30']
+    for hora in pausas:
+        if hora in schedule.index:
+            schedule.loc[hora] = -1
+
     df_prof = df[df["Professor(a)"] == professor_name].copy()
 
     # Se for simular uma nova disciplina, adiciona uma linha fictícia
@@ -87,10 +94,7 @@ def build_schedule_with_conflicts(df, professor_name, disciplina_simulada=None):
                     disciplinas_map[(dia, horario)].append(disciplina)
 
     # Define os horários de pausa como -1
-    pausas = ['11:30', '12:00', '12:30', '13:00', '17:30']
-    for hora in pausas:
-        if hora in schedule.index:
-            schedule.loc[hora] = -1
+   
 
     # Conflitos: células com mais de uma disciplina
     conflitos = {
@@ -99,4 +103,210 @@ def build_schedule_with_conflicts(df, professor_name, disciplina_simulada=None):
         if len(set(disciplinas)) > 1
     }
 
-    return schedule, conflitos, disciplinas_map, False
+    registros = []
+    for (dia, hora), disciplinas in conflitos.items():
+        registros.append({
+            "Dia": dia,
+            "Hora": hora,
+            "Nº Disciplinas": len(set(disciplinas)),
+            "Disciplinas": ", ".join(sorted(set(disciplinas)))
+        })
+
+    return schedule, registros, disciplinas_map, False
+
+
+def plot_matriz_conflitos(df):
+    # Garante colunas esperadas
+    df = df[['Ordem', 'Disciplina', 'Horario']].dropna(subset=["Disciplina", "Horario"])
+    df = df.drop_duplicates(subset=["Ordem"])
+
+    # Mapeia código da disciplina (Ordem) → blocos de horário
+    def blocos_ocupados(horario_str):
+        blocos = set()
+        for bloco in str(horario_str).split("/"):
+            blocos.update(decode_schedule(bloco.strip()))
+        return blocos
+
+    ordem_to_blocos = {
+        row["Ordem"]: blocos_ocupados(row["Horario"])
+        for _, row in df.iterrows()
+    }
+
+    ordem_to_nome = dict(zip(df["Ordem"], df["Disciplina"]))
+    codigos = list(ordem_to_blocos.keys())
+
+    # Gera matriz de conflitos
+    result = []
+    for o1, o2 in combinations(codigos, 2):
+        intersecao = ordem_to_blocos[o1].intersection(ordem_to_blocos[o2])
+        conflito = int(len(intersecao) > 0)
+        result.append({
+            "Ordem 1": o1, "Ordem 2": o2, "Conflito": conflito,
+            "Disciplina 1": ordem_to_nome[o1],
+            "Disciplina 2": ordem_to_nome[o2]
+        })
+        result.append({
+            "Ordem 1": o2, "Ordem 2": o1, "Conflito": conflito,
+            "Disciplina 1": ordem_to_nome[o2],
+            "Disciplina 2": ordem_to_nome[o1]
+        })
+
+    # Diagonal (sem conflito)
+    for o in codigos:
+        result.append({
+            "Ordem 1": o, "Ordem 2": o, "Conflito": 0,
+            "Disciplina 1": ordem_to_nome[o],
+            "Disciplina 2": ordem_to_nome[o]
+        })
+
+    df_conflito = pd.DataFrame(result)
+
+    # Cria gráfico Altair
+    chart = alt.Chart(df_conflito).mark_rect().encode(
+        x=alt.X('Ordem 1:N', sort=codigos, title=None),
+        y=alt.Y('Ordem 2:N', sort=codigos, title=None),
+        color=alt.Color(
+            'Conflito:O',
+            scale=alt.Scale(domain=[0, 1], range=["#07519b", "#ff4d4d"]),
+            legend=None
+        ),
+        tooltip=[
+            # alt.Tooltip('Ordem 1:N', title="Código 1"),
+            alt.Tooltip('Disciplina 1:N'),
+            # alt.Tooltip('Ordem 2:N', title="Código 2"),
+            alt.Tooltip('Disciplina 2:N'),
+            alt.Tooltip('Conflito:O', title="Conflito")
+        ]
+    ).properties(
+        width=500,
+        height=500,
+        title="Matriz de Conflitos entre Disciplinas"
+    ).configure_axis(
+        labelFontSize=11,
+        labelAngle=0
+    )
+
+    return chart, df_conflito
+
+
+def disciplinas_livres_professor(df_conflito, df_disciplinas, professor):
+    # 1. Identifica os códigos atribuídos ao professor atual
+    atribuídas = df_disciplinas[df_disciplinas["Professor(a)"] == professor]["Ordem"].unique().tolist()
+
+    # 2. Identifica disciplinas em conflito com as atribuídas
+    conflitos_com_atribuídas = df_conflito[
+        (df_conflito["Ordem 1"].isin(atribuídas)) &
+        (df_conflito["Conflito"] == 1)
+    ]["Ordem 2"].unique().tolist()
+
+    # 3. Seleciona disciplinas ainda não atribuídas a nenhum professor
+    nao_atribuidas = df_disciplinas[
+        df_disciplinas["Professor(a)"].isna() | (df_disciplinas["Professor(a)"].astype(str).str.strip() == "")
+    ]
+
+    # 4. Códigos candidatos (não atribuídas + sem conflito)
+    livres = nao_atribuidas[
+        ~nao_atribuidas["Ordem"].isin(atribuídas + conflitos_com_atribuídas)
+    ][["Ordem", "Disciplina"]].drop_duplicates()
+
+    return livres.sort_values("Ordem").reset_index(drop=True)
+
+
+def build_schedule_from_dataframe(df):
+    schedule = pd.DataFrame(0, index=time_slots, columns=DAYS)
+    disciplinas_map = { (dia, hora): [] for dia in DAYS for hora in time_slots }
+
+    pausas = ['11:30', '12:00', '12:30', '13:00', '17:30']
+    for hora in pausas:
+        if hora in schedule.index:
+            schedule.loc[hora] = -1
+
+    df_prof = df.copy()
+
+    if df_prof.empty:
+        return schedule, {}, {}, True
+
+    for _, row in df_prof.iterrows():
+        disciplina = row.get("Disciplina", "Desconhecida")
+        horarios = row.get("Horario", "")
+        for bloco in str(horarios).split("/"):
+            for dia, horario in decode_schedule(bloco.strip()):
+                if dia in schedule.columns and horario in schedule.index:
+                    schedule.loc[horario, dia] += 1
+                    disciplinas_map[(dia, horario)].append(disciplina)
+
+    # Define os horários de pausa como -1
+   
+
+    # Conflitos: células com mais de uma disciplina
+    conflitos = {
+        (dia, hora): disciplinas
+        for (dia, hora), disciplinas in disciplinas_map.items()
+        if len(set(disciplinas)) > 1
+    }
+
+    registros = []
+    for (dia, hora), disciplinas in conflitos.items():
+        registros.append({
+            "Dia": dia,
+            "Hora": hora,
+            "Nº Disciplinas": len(set(disciplinas)),
+            "Disciplinas": ", ".join(sorted(set(disciplinas)))
+        })
+
+    return schedule, registros, disciplinas_map, False
+
+
+def plot_schedule_altair(schedule_df, conflitos, disciplinas_map, professor_name):
+    df = schedule_df.reset_index().melt(id_vars='index', var_name='Dia', value_name='Aulas')
+    df.columns = ['Hora', 'Dia', 'Aulas']
+    df['Aulas'] = df['Aulas'].fillna(0).astype(int)
+
+    # Mostra todas as disciplinas da célula, mesmo se for só uma
+    df['DisciplinasNaCelula'] = df.apply(
+        lambda row: ", ".join(sorted(set(disciplinas_map.get((row['Dia'], row['Hora']), [])))),
+        axis=1
+    )
+
+    df['TemConflito'] = df.apply(
+        lambda row: (row['Dia'], row['Hora']) in conflitos,
+        axis=1
+    )
+
+    chart = alt.Chart(df).mark_rect(stroke='#efefef',  # Borda cinza clara para melhor visualização
+        strokeWidth=0.5).encode(
+        y=alt.Y('Hora:O', sort=schedule_df.index, title=None),
+        x=alt.X('Dia:O', sort=DAYS, title=None, axis=alt.Axis(labelAngle=0, orient='top')),
+        color=alt.Color(
+            'Aulas:O',
+            scale=alt.Scale(
+                range=["#9c9c9c", "#ffffff", "#07519b", "#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404","#7d0404"],
+                domain=[-1, 0, 1, 2,3,4,5,6,7,8,9,10,11,12,13,14,15]
+            ),
+            legend=None
+        ),
+        tooltip=[
+            alt.Tooltip('Dia:N'),
+            alt.Tooltip('Hora:N'),
+            # alt.Tooltip('Aulas:Q', title='Total de Aulas'),
+            alt.Tooltip('DisciplinasNaCelula:N', title='Disciplinas')
+        ]
+    ).properties(
+        # title=f'Horário de {professor_name}',
+        # width=700,
+        height=300
+    ).configure_view(
+        stroke='transparent',
+        fill='#ffffff'
+    ).configure(
+        background='#ffffff'
+    ).configure_axis(
+        grid=False,
+        domain=False,
+        labelFontSize=12
+    ).configure_title(
+        fontSize=18,
+        anchor='start'
+    )
+
+    return chart

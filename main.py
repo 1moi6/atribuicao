@@ -16,6 +16,12 @@ if 'page' not in st.session_state:
 if 'disciplinas' not in st.session_state:
     st.session_state['disciplinas'] = pd.DataFrame()
 
+if 'painel' not in st.session_state:
+    st.session_state['painel'] = False
+
+if 'menu_options' not in st.session_state:
+    st.session_state['menu_options'] = None
+
 if 'professores' not in st.session_state:
     st.session_state['professores'] = pd.DataFrame()
 

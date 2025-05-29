@@ -3,18 +3,8 @@ from streamlit_autorefresh import st_autorefresh
 import pandas as pd
 import os
 from datetime import datetime
-import altair as alt
 
-
-# st.markdown("""
-        #     <style>
-        #     .st-emotion-cache-1wvkpev{
-        #         border: 0px solid #000;
-        #             }
-        #     </style>
-        # """, unsafe_allow_html=True)
-
-from componente import DAYS, build_schedule_with_conflicts
+from componente import DAYS, build_schedule_with_conflicts, plot_matriz_conflitos, disciplinas_livres_professor, build_schedule_from_dataframe, plot_schedule_altair
 
 now = datetime.now()
 ano_atual = now.year
@@ -53,6 +43,23 @@ def usuario():
         st.logout()
     st.session_state.update({"menu_options":None})
 
+@st.dialog("Analisar conflito de horários",width = "large")
+def analise_conflito():
+    disciplinas = pd.read_csv(os.path.join(DATA_DIR, f"disciplinas_{st.session_state['semestre']}.csv"))
+    colunas = disciplinas.columns.tolist()
+    disciplinas_livres = disciplinas[disciplinas[colunas[-1]].isna()]
+    selecao = st.multiselect('Selecione as disciplinas de interesse:',options=list(range(len(disciplinas_livres))), placeholder="Todas as disciplinas livres estão selecionadas", format_func=lambda x: f'{disciplinas_livres.iloc[x,0]} - {disciplinas_livres.iloc[x,2]}')
+    if len(selecao):
+        disciplinas_livres = disciplinas_livres.iloc[selecao,:]
+        grade, conflitos, mapa,_ = build_schedule_from_dataframe(disciplinas_livres)
+    else:
+        grade, conflitos, mapa,_ = build_schedule_from_dataframe(disciplinas_livres)
+    st.altair_chart(plot_schedule_altair(grade,conflitos,mapa, None), use_container_width=True)
+    if len(conflitos):
+        st.markdown(f"**Conflitos de horários**")
+        st.dataframe(pd.DataFrame(conflitos),hide_index=True)
+    st.session_state.update({"menu_options":None})
+    pass
 
 def muda_pagina():
     xx = st.session_state['menu_options']
@@ -62,60 +69,10 @@ def muda_pagina():
         usuario()
     if xx == ":material/calendar_month:":
         selecionar_semestre()
+    if xx == ":material/event_busy:":
+        analise_conflito()
+        pass
 
-def plot_schedule_altair(schedule_df, conflitos, disciplinas_map, professor_name):
-    df = schedule_df.reset_index().melt(id_vars='index', var_name='Dia', value_name='Aulas')
-    df.columns = ['Hora', 'Dia', 'Aulas']
-    df['Aulas'] = df['Aulas'].fillna(0).astype(int)
-
-    # Mostra todas as disciplinas da célula, mesmo se for só uma
-    df['DisciplinasNaCelula'] = df.apply(
-        lambda row: ", ".join(sorted(set(disciplinas_map.get((row['Dia'], row['Hora']), [])))),
-        axis=1
-    )
-
-    df['TemConflito'] = df.apply(
-        lambda row: (row['Dia'], row['Hora']) in conflitos,
-        axis=1
-    )
-
-    chart = alt.Chart(df).mark_rect(stroke='#efefef',  # Borda cinza clara para melhor visualização
-        strokeWidth=0.5).encode(
-        y=alt.Y('Hora:O', sort=schedule_df.index, title=None),
-        x=alt.X('Dia:O', sort=DAYS, title=None, axis=alt.Axis(labelAngle=0, orient='top')),
-        color=alt.Color(
-            'Aulas:O',
-            scale=alt.Scale(
-                range=["#9c9c9c", "#ffffff", "#07519b", "#7d0404","#7d0404","#7d0404","#7d0404"],
-                domain=[-1, 0, 1, 2,3,4,5]
-            ),
-            legend=None
-        ),
-        tooltip=[
-            alt.Tooltip('Dia:N'),
-            alt.Tooltip('Hora:N'),
-            # alt.Tooltip('Aulas:Q', title='Total de Aulas'),
-            alt.Tooltip('DisciplinasNaCelula:N', title='Disciplinas')
-        ]
-    ).properties(
-        # title=f'Horário de {professor_name}',
-        # width=700,
-        height=300
-    ).configure_view(
-        stroke='transparent',
-        fill='#ffffff'
-    ).configure(
-        background='#ffffff'
-    ).configure_axis(
-        grid=False,
-        domain=False,
-        labelFontSize=12
-    ).configure_title(
-        fontSize=18,
-        anchor='start'
-    )
-
-    return chart
 
 def load_dados():
     professores = pd.read_csv(os.path.join(DATA_DIR, f"professores_{st.session_state['semestre']}.csv"))
@@ -158,6 +115,17 @@ def desalocadisciplina():
             disciplinas.loc[disciplinas['Ordem'] == row['Ordem'], "Professor(a)"]=None
             disciplinas.to_csv(os.path.join(DATA_DIR, f"disciplinas_{st.session_state['semestre']}.csv"), index=False)
             
+def muda_pagina1():
+    xx = st.session_state['menu_options1']
+    if xx == ":material/arrow_back:":
+        st.session_state.update({"page": "home"})
+    if xx == ":material/account_circle:":
+        st.login()
+    if xx == ":material/calendar_month:":
+        selecionar_semestre()
+    if xx == ":material/event_busy:":
+        st.session_state.update({"page": "conflitos"})
+        pass
 
 def on_click_callback(x):
     """Função de callback para o botão 'Acompanhar distribuição'."""
@@ -189,17 +157,13 @@ def run():
             if st.session_state.get('user_email') in ['moiseis@gmail.com']:
                 st.button("Inserir dados", use_container_width=True, on_click=on_click_callback,args=("inserir_dados",))
                 st.button("Sistema de atribuição", use_container_width=True, on_click=on_click_callback,args=("sistema",))
+            st.button("Analisar conflito de horários", use_container_width=True, on_click=on_click_callback, args=("conflitos",))    
             st.button("Acompanhar distribuição", use_container_width=True, on_click=on_click_callback,args=("acompanhamento",))
             st.button("Encerrar sessão", use_container_width=True, on_click=on_click_callback,args=("sair",))
 
     if st.session_state['page']=="inserir_dados":
-        col1, col2 = st.columns([0.9,0.1],vertical_alignment="top")
+        col1, col2 = st.columns([0.8,0.2],vertical_alignment="top")
         col1.markdown("""
-            <style>
-            .st-emotion-cache-1wvkpev{
-                border: 0px solid #000;
-                    }
-            </style>
             <div class="title-text-wrapper-left">
                 <div class="title-text">Insira dados das disciplinas e lista de professores - DEMAT - UFMT</div>
             </div>
@@ -233,16 +197,16 @@ def run():
         disciplinas,professores = load_dados()
         st.session_state['professores'] = professores
         st.session_state['disciplinas'] = disciplinas
-        col1, col2 = st.columns([0.85,0.15],vertical_alignment="top")
-        
+        col1, col2 = st.columns([0.7,0.3],vertical_alignment="top")
+        col2.segmented_control("Voltar",options=[":material/arrow_back:",":material/calendar_month:",":material/event_busy:",":material/account_circle:"],label_visibility="collapsed", 
+                             on_change=muda_pagina, key='menu_options',selection_mode="single",default = None)
         col1.markdown(f"""
             <div class="title-text-wrapper-left">
                 <div class="title-text">Atribuição de disciplinas - {"/".join(st.session_state['semestre'].split("_"))}</div>
             </div>
         """, unsafe_allow_html=True)
         
-        col2.segmented_control("Voltar",options=[":material/calendar_month:",":material/arrow_back:",":material/account_circle:"],label_visibility="collapsed", 
-                             on_change=muda_pagina, key='menu_options',selection_mode="single",default = None)
+        
         
         if not disciplinas.empty and not professores.empty:
             cols1,cols2 = st.columns([0.3, 0.7])
@@ -273,7 +237,7 @@ def run():
                 else:
                     st.session_state['disciplina'] = None 
             
-            cs2.markdown(f"**Atribuidas ao professor**") 
+            cs2.markdown(f"**Atribuídas ao professor**") 
             profdis = disciplinas[disciplinas[colunas[-1]]==st.session_state['professor']]
             contlistdis = cs2.container(border=False)
             if not profdis.empty:
@@ -287,42 +251,59 @@ def run():
 
             grade, conflitos,mapa, vazio = build_schedule_with_conflicts(disciplinas, st.session_state['professor'],dis_sel)
                 
-            
-            if len(conflitos):
-                with cont_sis.expander("Conflitos de horários", expanded=False):
+            # if len(conflitos):
+            with cs1.popover("Conflitos de horários e opções",use_container_width=True):
+                if len(conflitos):
                     st.markdown(f"**Conflitos de horários**")
-                    st.dataframe(conflitos)
+                    st.dataframe(pd.DataFrame(conflitos),hide_index=True)
+                matriz,df_conflito = plot_matriz_conflitos(disciplinas)
+                df_livres_prf = disciplinas_livres_professor(df_conflito,disciplinas,st.session_state['professor'])
+                if len(df_livres_prf):
+                    st.markdown(f"**Opções sem conflitos**")
+                    st.dataframe(df_livres_prf,use_container_width=True,hide_index=True)
+                st.altair_chart(matriz)
+                    
             
             cont_sis.altair_chart(plot_schedule_altair(grade,conflitos,mapa, st.session_state['professor']), use_container_width=True)
             
-
-            # st.dataframe(disciplinas, use_container_width=True, hide_index=True,height=500)
+            st.dataframe(disciplinas, use_container_width=True, hide_index=True,height=3000)
+         
 
     if st.session_state['page']=="acompanhamento":
-        load_css("./assets/css/styles.css")
-        
-        st_autorefresh(interval=5 * 1000, key="data_refresh")
-        col1,col2 = st.columns([0.85,0.15],vertical_alignment="top")
-        col1.markdown("""
-            <style>
-            .st-emotion-cache-1wvkpev{
-                border: 0px solid #000;
-                    }
-            </style>
-            
-        """, unsafe_allow_html=True)
+        col1, col2 = st.columns([0.7,0.3],vertical_alignment="top")
+        col2.segmented_control("Voltar",options=[":material/arrow_back:",":material/calendar_month:",":material/event_busy:",":material/account_circle:"],label_visibility="collapsed", 
+                             on_change=muda_pagina, key='menu_options',selection_mode="single",default = None)
         col1.markdown(f"""
             <div class="title-text-wrapper-left">
                 <div class="title-text">Planilha de distribuição de disciplinas - {"/".join(st.session_state['semestre'].split("_"))}</div>
             </div>
         """, unsafe_allow_html=True)
         
-        # col3.selectbox("Selecione o semestre", options=set(semestres), key='semestre', index=0, label_visibility="collapsed")
-        
-        col2.segmented_control("Voltar",options=[":material/calendar_month:",":material/arrow_back:",":material/account_circle:"],label_visibility="collapsed", 
-                             on_change=muda_pagina, key='menu_options',selection_mode="single",default = None)
-        # st.divider()
-        st.markdown('<div class="v-space"></div>', unsafe_allow_html=True)
+        st_autorefresh(interval=60 * 1000, key="data_refresh")
         
         planilha = pd.read_csv(os.path.join(DATA_DIR, f"disciplinas_{st.session_state['semestre']}.csv"))
-        st.dataframe(planilha, use_container_width=True, hide_index=True, height=500)
+        st.dataframe(planilha, use_container_width=True, hide_index=True,height=3000)
+    
+    if st.session_state['page']=="conflitos":
+        load_css("./assets/css/styles.css")
+        col1, col2 = st.columns([0.8,0.2],vertical_alignment="top")
+        col2.segmented_control("Voltar",options=[":material/arrow_back:",":material/calendar_month:",":material/event_busy:",":material/account_circle:"],label_visibility="collapsed", 
+                             on_change=muda_pagina1, key='menu_options1',selection_mode="single",default = None)
+        col1.markdown(f"""
+            <div class="title-text-wrapper-left">
+                <div class="title-text">Análise de conflitos - {"/".join(st.session_state['semestre'].split("_"))}</div>
+            </div>
+        """, unsafe_allow_html=True)
+        disciplinas = pd.read_csv(os.path.join(DATA_DIR, f"disciplinas_{st.session_state['semestre']}.csv"))
+        colunas = disciplinas.columns.tolist()
+        disciplinas_livres = disciplinas[disciplinas[colunas[-1]].isna()]
+        selecao = st.multiselect('Selecione as disciplinas de interesse:',options=list(range(len(disciplinas_livres))), placeholder="Todas as disciplinas livres estão selecionadas", format_func=lambda x: f'{disciplinas_livres.iloc[x,0]} - {disciplinas_livres.iloc[x,2]}')
+        if len(selecao):
+            disciplinas_livres = disciplinas_livres.iloc[selecao,:]
+            grade, conflitos, mapa,_ = build_schedule_from_dataframe(disciplinas_livres)
+        else:
+            grade, conflitos, mapa,_ = build_schedule_from_dataframe(disciplinas_livres)
+        st.altair_chart(plot_schedule_altair(grade,conflitos,mapa, None), use_container_width=True)
+        if len(conflitos):
+            st.markdown(f"**Conflitos de horários**")
+            st.dataframe(pd.DataFrame(conflitos),hide_index=True)
