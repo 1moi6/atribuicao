@@ -69,9 +69,9 @@ def selecionar_semestre():
         st.rerun()
     else:
         st.session_state.update({"menu_options":None})
-def run():
-   
 
+    
+def run():
     # Centraliza com colunas e flex
     if st.session_state['page']=="home":
         load_css("./assets/css/styles.css")
