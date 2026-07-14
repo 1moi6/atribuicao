@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Distribuição de Disciplinas — DEMAT/UFMT</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">📚</span>
+        <div class="brand-text">
+          <h1>Distribuição de Disciplinas</h1>
+          <span class="brand-sub">DEMAT · UFMT <span id="semestre-label"></span></span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="status-conn" class="status-pill" title="Estado da conexão">—</span>
+        <button id="btn-reload" class="icon-btn" title="Recarregar do Drive">↻</button>
+        <button id="btn-save" class="btn btn-primary" title="Salvar atribuições no Drive">
+          Salvar <span id="dirty-count" class="badge hidden">0</span>
+        </button>
+        <button id="btn-export" class="icon-btn" title="Exportar">⭳</button>
+        <button id="btn-config" class="icon-btn" title="Configurar">⚙</button>
+        <button id="btn-theme" class="icon-btn" title="Alternar tema">◐</button>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="atribuicao">Atribuição</button>
+      <button class="tab" data-tab="grade">Grade</button>
+      <button class="tab" data-tab="conflitos">Conflitos</button>
+      <button class="tab" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="distribuicao">Distribuição</button>
+    </nav>
+
+    <main id="view" class="view"></main>
+
+    <!-- Menu de exportação -->
+    <div id="export-menu" class="popmenu hidden">
+      <button data-exp="xlsx">Planilha de encargos (.xlsx)</button>
+      <button data-exp="csv">CSV de trabalho (.csv)</button>
+      <button data-exp="pdf">Relatório em PDF (imprimir)</button>
+    </div>
+
+    <!-- Modal de configuração -->
+    <div id="config-modal" class="modal-backdrop hidden">
+      <div class="modal">
+        <h2>Configuração</h2>
+        <p class="muted">
+          Endereço do Web App (Apps Script) e token de escrita. O token fica só neste
+          navegador e é exigido apenas para salvar. Sem token, o modo é somente leitura.
+        </p>
+        <label>Endpoint do Apps Script (URL do Web App)</label>
+        <input id="cfg-endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec" />
+        <label>Token de escrita (coordenação)</label>
+        <input id="cfg-token" type="password" placeholder="opcional — deixe vazio para só leitura" />
+        <div class="modal-sep"></div>
+        <label>Ou trabalhe com arquivos locais:</label>
+        <div class="file-row">
+          <label class="file-btn">Importar disciplinas CSV
+            <input id="file-disc" type="file" accept=".csv" hidden />
+          </label>
+          <label class="file-btn">Importar professores CSV
+            <input id="file-prof" type="file" accept=".csv" hidden />
+          </label>
+        </div>
+        <div class="modal-actions">
+          <button id="cfg-cancel" class="btn">Fechar</button>
+          <button id="cfg-save" class="btn btn-primary">Salvar config</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="vendor/xlsx.full.min.js"></script>
+    <script src="logic.js"></script>
+    <script src="sheets.js"></script>
+    <script src="export.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
