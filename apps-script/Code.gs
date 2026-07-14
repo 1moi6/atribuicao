@@ -40,6 +40,28 @@ function _json(obj) {
   );
 }
 
+// Normaliza um nome de coluna: sem acento, minúsculo, só letras/números.
+function _normKey(s) {
+  return String(s == null ? "" : s)
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+}
+
+// Localiza a coluna cujo cabeçalho casa (igual, ou começa por alias de 5+ chars)
+// com algum dos aliases. Retorna o índice ou -1.
+function _findCol(header, aliases) {
+  var norm = header.map(_normKey);
+  for (var i = 0; i < norm.length; i++) {
+    for (var j = 0; j < aliases.length; j++) {
+      var a = aliases[j];
+      if (norm[i] === a || (a.length >= 5 && norm[i].indexOf(a) === 0)) return i;
+    }
+  }
+  return -1;
+}
+
 function doGet() {
   try {
     var ss = _ss();
@@ -63,12 +85,15 @@ function doPost(e) {
     var values = sheet.getDataRange().getValues();
     var header = values[0].map(function (h) { return String(h).trim(); });
 
-    var colOrdem = header.indexOf("Ordem");
-    var colProf = header.indexOf("Professor(a)");
-    if (colProf < 0) colProf = header.indexOf("Professor Responsável");
-    if (colOrdem < 0 || colProf < 0) {
-      return _json({ ok: false, error: "Cabeçalho sem 'Ordem' ou 'Professor(a)'." });
-    }
+    // Resolução tolerante (maiúsc./acentos/pontuação); fallback posicional:
+    // Ordem = 1ª coluna, Professor = última coluna (layout canônico).
+    var colOrdem = _findCol(header, ["ordem", "order", "numero", "num", "id"]);
+    if (colOrdem < 0) colOrdem = 0;
+    var colProf = _findCol(header, [
+      "professora", "professor", "professores", "professorresponsavel",
+      "docenteresponsavel", "responsavel", "docente"
+    ]);
+    if (colProf < 0) colProf = header.length - 1;
 
     // Índice Ordem → número da linha (1-based na planilha).
     var ordemToRow = {};

@@ -89,19 +89,100 @@
     return lines.join("\n");
   }
 
+  // ---- Casamento tolerante de cabeçalhos ---------------------------------
+  // Normaliza um nome de coluna: sem acento, minúsculo, só letras/números.
+  //   "Professor(a)" → "professora" ; "Horário" → "horario" ; "C.H." → "ch"
+  function normalizeKey(s) {
+    return String(s == null ? "" : s)
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  }
+
+  // Um cabeçalho combina com um alias se for igual ao alias OU (para aliases
+  // com 5+ chars) começar por ele — cobre "Docentes por ordem…", "Cursos" etc.
+  // Aliases curtos (ch, id, n) exigem igualdade exata para não haver colisão.
+  function headerMatches(normHeader, alias) {
+    if (normHeader === alias) return true;
+    return alias.length >= 5 && normHeader.startsWith(alias);
+  }
+
+  // Specs em ORDEM CANÔNICA (usada no fallback posicional).
+  const SPEC_DISC = [
+    { key: "Ordem", aliases: ["ordem", "order", "numero", "num", "no", "n", "id", "item", "indice"] },
+    { key: "Curso", aliases: ["curso", "cursos", "course"] },
+    { key: "Disciplina", aliases: ["disciplina", "disciplinas", "materia", "componente", "componentecurricular", "discipline"] },
+    { key: "Horario", aliases: ["horario", "horarios", "horariocodigo", "codigohorario", "schedule"] },
+    { key: "CH", aliases: ["ch", "cargahoraria", "cargahorariatotal", "chtotal", "carga"] },
+    { key: "Professor(a)", aliases: ["professora", "professor", "professores", "professorresponsavel", "docenteresponsavel", "responsavel", "docente", "docentes", "prof"] },
+  ];
+  const SPEC_PROF = [
+    { key: "Ordem", aliases: ["ordem", "order", "numero", "num", "no", "n", "id"] },
+    { key: "Docentes", aliases: ["docentes", "docente", "professor", "professora", "professores", "nome", "nomes", "professorresponsavel"] },
+  ];
+
+  // Resolve, para um conjunto de registros brutos, qual coluna de origem
+  // alimenta cada campo canônico. 1) casa por cabeçalho (tolerante);
+  // 2) para campos não resolvidos, usa a coluna na posição canônica se estiver
+  // livre. Retorna registros reordenados no schema canônico.
+  function remapRecords(rawRows, specs) {
+    if (!rawRows || !rawRows.length) return [];
+    const sourceKeys = Object.keys(rawRows[0]); // ordem das colunas preservada
+    const normKeys = sourceKeys.map(normalizeKey);
+    const used = new Set();
+    const mapping = {};
+
+    // 1) Casamento por cabeçalho.
+    for (const spec of specs) {
+      for (let i = 0; i < sourceKeys.length; i++) {
+        if (used.has(i)) continue;
+        if (spec.aliases.some((a) => headerMatches(normKeys[i], a))) {
+          mapping[spec.key] = sourceKeys[i];
+          used.add(i);
+          break;
+        }
+      }
+    }
+    // 2) Fallback posicional para campos ainda sem coluna.
+    specs.forEach((spec, idx) => {
+      if (mapping[spec.key] != null) return;
+      if (sourceKeys[idx] != null && !used.has(idx)) {
+        mapping[spec.key] = sourceKeys[idx];
+        used.add(idx);
+      }
+    });
+
+    return rawRows.map((r) => {
+      const o = {};
+      for (const spec of specs) o[spec.key] = mapping[spec.key] != null ? r[mapping[spec.key]] : "";
+      return o;
+    });
+  }
+
+  function toNum(v) {
+    if (v === "" || v == null) return "";
+    const n = Number(String(v).trim().replace(",", "."));
+    return Number.isFinite(n) ? n : "";
+  }
+
   // Normaliza registros vindos de qualquer fonte para o schema esperado.
   function normalizeDisciplinas(arr) {
-    return arr.map((d) => ({
-      Ordem: Number(d.Ordem),
-      Curso: d.Curso || "",
-      Disciplina: d.Disciplina || "",
-      Horario: (d.Horario || d["Horário"] || "").trim(),
-      CH: d.CH === "" || d.CH == null ? "" : Number(d.CH),
-      "Professor(a)": (d["Professor(a)"] || d["Professor Responsável"] || "").trim(),
-    }));
+    return remapRecords(arr, SPEC_DISC)
+      .map((d) => ({
+        Ordem: toNum(d.Ordem),
+        Curso: String(d.Curso || "").trim(),
+        Disciplina: String(d.Disciplina || "").trim(),
+        Horario: String(d.Horario || "").trim(),
+        CH: toNum(d.CH),
+        "Professor(a)": String(d["Professor(a)"] || "").trim(),
+      }))
+      .filter((d) => d.Ordem !== "" || d.Disciplina);
   }
   function normalizeProfessores(arr) {
-    return arr.map((p) => ({ Ordem: Number(p.Ordem), Docentes: p.Docentes || "" }));
+    return remapRecords(arr, SPEC_PROF)
+      .map((p) => ({ Ordem: toNum(p.Ordem), Docentes: String(p.Docentes || "").trim() }))
+      .filter((p) => p.Docentes);
   }
 
   // ---- Rede (Apps Script) -----------------------------------------------
