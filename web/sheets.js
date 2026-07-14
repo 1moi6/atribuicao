@@ -211,6 +211,59 @@
 
   const fieldsOf = (kind) => SPECS[kind].map((s) => ({ key: s.key, label: s.label }));
 
+  // ---- Leitura de .xlsx (SheetJS) ---------------------------------------
+  // Lê um workbook e devolve { nomeAba: [registros] }, com a 1ª linha como
+  // cabeçalho; descarta colunas sem título e linhas vazias.
+  function readWorkbook(arrayBuffer) {
+    const wb = XLSX.read(arrayBuffer, { type: "array" });
+    const sheets = {};
+    wb.SheetNames.forEach((name) => {
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[name], { defval: "", raw: false });
+      const clean = rows
+        .map((r) => {
+          const o = {};
+          Object.keys(r).forEach((k) => {
+            if (!/^__EMPTY/.test(k) && String(k).trim() !== "") o[k] = r[k];
+          });
+          return o;
+        })
+        .filter((r) => Object.values(r).some((v) => String(v).trim() !== ""));
+      if (clean.length) sheets[name] = clean;
+    });
+    return sheets;
+  }
+
+  // Quantos campos (fora "Ordem", ambíguo) casam por cabeçalho — usado para
+  // adivinhar qual aba é de disciplinas e qual é de docentes.
+  function countHeaderMatches(kind, headers) {
+    const norm = headers.map(normalizeKey);
+    let c = 0;
+    for (const spec of SPECS[kind]) {
+      if (spec.key === "Ordem") continue;
+      if (norm.some((nk) => spec.aliases.some((a) => headerMatches(nk, a)))) c++;
+    }
+    return c;
+  }
+
+  // Detecta, num conjunto de abas, qual alimenta disciplinas e qual docentes.
+  function detectSheets(sheets) {
+    const names = Object.keys(sheets);
+    const scoreD = {}, scoreP = {};
+    names.forEach((n) => {
+      const h = headersOf(sheets[n]);
+      scoreD[n] = countHeaderMatches("disc", h);
+      scoreP[n] = countHeaderMatches("prof", h);
+    });
+    let disc = null, best = -1;
+    names.forEach((n) => { if (scoreD[n] > best) { best = scoreD[n]; disc = n; } });
+    let prof = null; best = -1;
+    names.forEach((n) => {
+      if (n === disc && names.length > 1) return;
+      if (scoreP[n] > best) { best = scoreP[n]; prof = n; }
+    });
+    return { disc, prof };
+  }
+
   // ---- Rede (Apps Script) -----------------------------------------------
   async function fetchFromSheet() {
     const { endpoint } = getConfig();
@@ -255,6 +308,8 @@
     fieldsOf,
     suggestMapping,
     applyMapping,
+    readWorkbook,
+    detectSheets,
     fetchFromSheet,
     saveAssignments,
   };

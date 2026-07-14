@@ -16,12 +16,19 @@ Web App do Apps Script (ver [`../apps-script/README.md`](../apps-script/README.m
 
 ## Entrada de dados e mapeamento de colunas
 
+Formatos aceitos (⚙ Configurar):
+
+- **Planilha da coordenação (`.xlsx`)** — recomendado. Um único arquivo com as abas de
+  disciplinas e de docentes (ex.: `Cópia de Encargos ….xlsx`, abas `Página2`/`Página3`).
+  O app **detecta automaticamente** qual aba é qual e abre o mapeamento em duas etapas.
+- **CSV** — separadamente, um para disciplinas e outro para professores.
+
 As colunas são reconhecidas **pelo nome do cabeçalho**, de forma tolerante a maiúsculas,
-acentos e pontuação (`Horário`, `C.H.`, `Professor Responsável`, `N°` etc.), e a ordem das
-colunas não importa. Ao **importar um CSV** (⚙ Configurar), abre um **painel de mapeamento**
-onde você confirma/ajusta qual coluna do arquivo alimenta cada campo, com uma prévia ao
-vivo — assim qualquer planilha pode ser encaixada, mesmo com nomes fora do padrão. Se um
-nome não for reconhecido, há fallback pela posição da coluna (ordem canônica abaixo).
+acentos e pontuação (`Horário`, `C.H.`, `Professor Responsável`, `N°`,
+`Docentes Por Ordem de Distribuição de Encargos…` etc.), e a ordem das colunas não importa.
+Ao importar, abre um **painel de mapeamento** onde você confirma/ajusta qual coluna (e, no
+`.xlsx`, qual aba) alimenta cada campo, com prévia ao vivo. Se um nome não for reconhecido,
+há fallback pela posição da coluna (ordem canônica abaixo).
 
 - **Disciplinas:** `Ordem, Curso, Disciplina, Horario, CH, Professor(a)`
 - **Professores:** `Ordem, Docentes`

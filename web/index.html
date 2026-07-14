@@ -58,12 +58,20 @@
         <label>Token de escrita (coordenação)</label>
         <input id="cfg-token" type="password" placeholder="opcional — deixe vazio para só leitura" />
         <div class="modal-sep"></div>
-        <label>Ou trabalhe com arquivos locais:</label>
+        <label>Ou importe uma planilha local:</label>
         <div class="file-row">
-          <label class="file-btn">Importar disciplinas CSV
+          <label class="file-btn file-btn-primary">Importar planilha da coordenação (.xlsx)
+            <input id="file-xlsx" type="file" accept=".xlsx,.xls" hidden />
+          </label>
+        </div>
+        <p class="muted" style="margin: 6px 0 0">
+          Reconhece as abas de disciplinas e de docentes; o mapeamento abre em seguida.
+        </p>
+        <div class="file-row" style="margin-top: 12px">
+          <label class="file-btn">Só disciplinas (CSV)
             <input id="file-disc" type="file" accept=".csv" hidden />
           </label>
-          <label class="file-btn">Importar professores CSV
+          <label class="file-btn">Só professores (CSV)
             <input id="file-prof" type="file" accept=".csv" hidden />
           </label>
         </div>
@@ -82,6 +90,10 @@
           Confirme qual coluna do arquivo alimenta cada campo. O mapeamento automático já
           vem selecionado — ajuste se necessário.
         </p>
+        <div id="map-sheet-row" class="map-row hidden">
+          <div class="map-flabel">Aba (planilha)</div>
+          <select id="map-sheet"></select>
+        </div>
         <div id="map-fields"></div>
         <div class="modal-sep"></div>
         <label>Prévia (primeiras linhas)</label>
