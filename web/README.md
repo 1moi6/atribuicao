@@ -14,6 +14,18 @@ Web App do Apps Script (ver [`../apps-script/README.md`](../apps-script/README.m
 - **Distribuição** — tabela filtrável de toda a distribuição.
 - **Exportar** — `.xlsx` (planilha de encargos), `.csv` de trabalho, PDF (imprimir).
 
+## Entrada de dados e mapeamento de colunas
+
+As colunas são reconhecidas **pelo nome do cabeçalho**, de forma tolerante a maiúsculas,
+acentos e pontuação (`Horário`, `C.H.`, `Professor Responsável`, `N°` etc.), e a ordem das
+colunas não importa. Ao **importar um CSV** (⚙ Configurar), abre um **painel de mapeamento**
+onde você confirma/ajusta qual coluna do arquivo alimenta cada campo, com uma prévia ao
+vivo — assim qualquer planilha pode ser encaixada, mesmo com nomes fora do padrão. Se um
+nome não for reconhecido, há fallback pela posição da coluna (ordem canônica abaixo).
+
+- **Disciplinas:** `Ordem, Curso, Disciplina, Horario, CH, Professor(a)`
+- **Professores:** `Ordem, Docentes`
+
 ## Rodar localmente
 
 Precisa ser servido por HTTP (não abrir via `file://`, por causa dos módulos e do fetch):

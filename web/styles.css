@@ -236,7 +236,12 @@ td.sem-prof { color: var(--danger); font-weight: 700; }
 }
 .modal { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 24px; width: 100%; max-width: 480px; border: 1px solid var(--border); }
+.modal.modal-wide { max-width: 680px; }
 .modal h2 { margin: 0 0 8px; font-size: 18px; }
+.map-row { display: grid; grid-template-columns: 190px 1fr; gap: 10px; align-items: center; margin-bottom: 8px; }
+.map-flabel { font-weight: 700; font-size: 13px; color: var(--text-soft); }
+#map-preview { font-size: 12px; }
+#map-preview th, #map-preview td { padding: 5px 8px; white-space: nowrap; }
 .modal-sep { height: 1px; background: var(--border); margin: 16px 0; }
 .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 .file-row { display: flex; gap: 8px; flex-wrap: wrap; }

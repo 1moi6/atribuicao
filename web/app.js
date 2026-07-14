@@ -478,19 +478,81 @@
     $("#config-modal").classList.add("hidden");
   }
 
-  function importarCSV(file, tipo) {
+  // ---- Import com painel de mapeamento ----
+  let pending = null; // { kind, rawRows, headers, mapping }
+
+  function openMapping(file, kind) {
     const reader = new FileReader();
     reader.onload = () => {
-      const objs = Store.csvToObjects(reader.result);
-      if (tipo === "disc") state.disciplinas = Store.normalizeDisciplinas(objs);
-      else state.professores = Store.normalizeProfessores(objs);
-      state.dirty.clear();
-      setStatus("local (CSV)", "ro");
-      refreshChrome();
-      render();
-      toast(`${tipo === "disc" ? "Disciplinas" : "Professores"} importados (${objs.length}).`, "ok");
+      const rawRows = Store.csvToObjects(reader.result);
+      if (!rawRows.length) return toast("Arquivo vazio ou inválido.", "err");
+      const headers = Store.headersOf(rawRows);
+      pending = { kind, rawRows, headers, mapping: Store.suggestMapping(kind, headers) };
+      renderMapping();
+      $("#map-modal").classList.remove("hidden");
     };
     reader.readAsText(file, "utf-8");
+  }
+
+  function renderMapping() {
+    const { kind, headers, mapping } = pending;
+    $("#map-title").textContent =
+      "Mapear colunas — " + (kind === "disc" ? "Disciplinas" : "Professores");
+    const box = $("#map-fields");
+    box.innerHTML = "";
+    Store.fieldsOf(kind).forEach((f) => {
+      const row = el("div", "map-row");
+      row.appendChild(el("div", "map-flabel", esc(f.label)));
+      const sel = el("select");
+      const opts = ['<option value="">— (vazio) —</option>'].concat(
+        headers.map(
+          (h) => `<option ${mapping[f.key] === h ? "selected" : ""}>${esc(h)}</option>`
+        )
+      );
+      sel.innerHTML = opts.join("");
+      sel.onchange = () => {
+        pending.mapping[f.key] = sel.value || null;
+        renderMapPreview();
+      };
+      row.appendChild(sel);
+      box.appendChild(row);
+    });
+    renderMapPreview();
+  }
+
+  function renderMapPreview() {
+    const { kind, rawRows, mapping } = pending;
+    const fields = Store.fieldsOf(kind);
+    const sample = rawRows.slice(0, 3);
+    const t = $("#map-preview");
+    const head = "<tr>" + fields.map((f) => `<th>${esc(f.label)}</th>`).join("") + "</tr>";
+    const body = sample
+      .map(
+        (r) =>
+          "<tr>" +
+          fields
+            .map((f) => `<td>${esc(mapping[f.key] ? r[mapping[f.key]] : "")}</td>`)
+            .join("") +
+          "</tr>"
+      )
+      .join("");
+    t.innerHTML = head + body;
+  }
+
+  function aplicarMapeamento() {
+    if (!pending) return;
+    const { kind, rawRows, mapping } = pending;
+    const recs = Store.applyMapping(kind, rawRows, mapping);
+    if (kind === "disc") state.disciplinas = recs;
+    else state.professores = recs;
+    state.dirty.clear();
+    pending = null;
+    $("#map-modal").classList.add("hidden");
+    closeConfig();
+    setStatus("local (CSV)", "ro");
+    refreshChrome();
+    render();
+    toast(`${kind === "disc" ? "Disciplinas" : "Professores"} importados (${recs.length}).`, "ok");
   }
 
   // ---------- Toast ----------
@@ -543,8 +605,25 @@
     $("#config-modal").onclick = (e) => {
       if (e.target.id === "config-modal") closeConfig();
     };
-    $("#file-disc").onchange = (e) => e.target.files[0] && importarCSV(e.target.files[0], "disc");
-    $("#file-prof").onchange = (e) => e.target.files[0] && importarCSV(e.target.files[0], "prof");
+    $("#file-disc").onchange = (e) => {
+      if (e.target.files[0]) openMapping(e.target.files[0], "disc");
+      e.target.value = "";
+    };
+    $("#file-prof").onchange = (e) => {
+      if (e.target.files[0]) openMapping(e.target.files[0], "prof");
+      e.target.value = "";
+    };
+    $("#map-cancel").onclick = () => {
+      pending = null;
+      $("#map-modal").classList.add("hidden");
+    };
+    $("#map-apply").onclick = aplicarMapeamento;
+    $("#map-modal").onclick = (e) => {
+      if (e.target.id === "map-modal") {
+        pending = null;
+        $("#map-modal").classList.add("hidden");
+      }
+    };
 
     // Export menu
     const menu = $("#export-menu");

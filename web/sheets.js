@@ -108,33 +108,36 @@
     return alias.length >= 5 && normHeader.startsWith(alias);
   }
 
-  // Specs em ORDEM CANÔNICA (usada no fallback posicional).
+  // Specs em ORDEM CANÔNICA (usada no fallback posicional). `label` é exibido
+  // no painel de mapeamento.
   const SPEC_DISC = [
-    { key: "Ordem", aliases: ["ordem", "order", "numero", "num", "no", "n", "id", "item", "indice"] },
-    { key: "Curso", aliases: ["curso", "cursos", "course"] },
-    { key: "Disciplina", aliases: ["disciplina", "disciplinas", "materia", "componente", "componentecurricular", "discipline"] },
-    { key: "Horario", aliases: ["horario", "horarios", "horariocodigo", "codigohorario", "schedule"] },
-    { key: "CH", aliases: ["ch", "cargahoraria", "cargahorariatotal", "chtotal", "carga"] },
-    { key: "Professor(a)", aliases: ["professora", "professor", "professores", "professorresponsavel", "docenteresponsavel", "responsavel", "docente", "docentes", "prof"] },
+    { key: "Ordem", label: "Ordem", aliases: ["ordem", "order", "numero", "num", "no", "n", "id", "item", "indice"] },
+    { key: "Curso", label: "Curso", aliases: ["curso", "cursos", "course"] },
+    { key: "Disciplina", label: "Disciplina", aliases: ["disciplina", "disciplinas", "materia", "componente", "componentecurricular", "discipline"] },
+    { key: "Horario", label: "Horário", aliases: ["horario", "horarios", "horariocodigo", "codigohorario", "schedule"] },
+    { key: "CH", label: "CH (carga horária)", aliases: ["ch", "cargahoraria", "cargahorariatotal", "chtotal", "carga"] },
+    { key: "Professor(a)", label: "Professor(a)", aliases: ["professora", "professor", "professores", "professorresponsavel", "docenteresponsavel", "responsavel", "docente", "docentes", "prof"] },
   ];
   const SPEC_PROF = [
-    { key: "Ordem", aliases: ["ordem", "order", "numero", "num", "no", "n", "id"] },
-    { key: "Docentes", aliases: ["docentes", "docente", "professor", "professora", "professores", "nome", "nomes", "professorresponsavel"] },
+    { key: "Ordem", label: "Ordem", aliases: ["ordem", "order", "numero", "num", "no", "n", "id"] },
+    { key: "Docentes", label: "Docente (nome)", aliases: ["docentes", "docente", "professor", "professora", "professores", "nome", "nomes", "professorresponsavel"] },
   ];
+  const SPECS = { disc: SPEC_DISC, prof: SPEC_PROF };
 
-  // Resolve, para um conjunto de registros brutos, qual coluna de origem
-  // alimenta cada campo canônico. 1) casa por cabeçalho (tolerante);
-  // 2) para campos não resolvidos, usa a coluna na posição canônica se estiver
-  // livre. Retorna registros reordenados no schema canônico.
-  function remapRecords(rawRows, specs) {
-    if (!rawRows || !rawRows.length) return [];
-    const sourceKeys = Object.keys(rawRows[0]); // ordem das colunas preservada
+  function headersOf(rawRows) {
+    return rawRows && rawRows.length ? Object.keys(rawRows[0]) : [];
+  }
+
+  // Sugere qual coluna de origem alimenta cada campo canônico.
+  // 1) casa por cabeçalho (tolerante); 2) fallback posicional (posição canônica
+  // se livre). Retorna { campoKey: colunaOrigem | null }.
+  function suggestMapping(kind, sourceKeys) {
+    const specs = SPECS[kind];
     const normKeys = sourceKeys.map(normalizeKey);
     const used = new Set();
     const mapping = {};
-
-    // 1) Casamento por cabeçalho.
     for (const spec of specs) {
+      mapping[spec.key] = null;
       for (let i = 0; i < sourceKeys.length; i++) {
         if (used.has(i)) continue;
         if (spec.aliases.some((a) => headerMatches(normKeys[i], a))) {
@@ -144,7 +147,6 @@
         }
       }
     }
-    // 2) Fallback posicional para campos ainda sem coluna.
     specs.forEach((spec, idx) => {
       if (mapping[spec.key] != null) return;
       if (sourceKeys[idx] != null && !used.has(idx)) {
@@ -152,10 +154,18 @@
         used.add(idx);
       }
     });
+    return mapping;
+  }
 
+  // Reordena registros brutos no schema canônico usando um mapeamento explícito.
+  function remapWithMapping(rawRows, kind, mapping) {
+    const specs = SPECS[kind];
     return rawRows.map((r) => {
       const o = {};
-      for (const spec of specs) o[spec.key] = mapping[spec.key] != null ? r[mapping[spec.key]] : "";
+      for (const spec of specs) {
+        const src = mapping[spec.key];
+        o[spec.key] = src != null && src !== "" ? r[src] : "";
+      }
       return o;
     });
   }
@@ -166,24 +176,40 @@
     return Number.isFinite(n) ? n : "";
   }
 
-  // Normaliza registros vindos de qualquer fonte para o schema esperado.
-  function normalizeDisciplinas(arr) {
-    return remapRecords(arr, SPEC_DISC)
-      .map((d) => ({
-        Ordem: toNum(d.Ordem),
-        Curso: String(d.Curso || "").trim(),
-        Disciplina: String(d.Disciplina || "").trim(),
-        Horario: String(d.Horario || "").trim(),
-        CH: toNum(d.CH),
-        "Professor(a)": String(d["Professor(a)"] || "").trim(),
-      }))
-      .filter((d) => d.Ordem !== "" || d.Disciplina);
-  }
-  function normalizeProfessores(arr) {
-    return remapRecords(arr, SPEC_PROF)
+  function coerce(kind, rows) {
+    if (kind === "disc") {
+      return rows
+        .map((d) => ({
+          Ordem: toNum(d.Ordem),
+          Curso: String(d.Curso || "").trim(),
+          Disciplina: String(d.Disciplina || "").trim(),
+          Horario: String(d.Horario || "").trim(),
+          CH: toNum(d.CH),
+          "Professor(a)": String(d["Professor(a)"] || "").trim(),
+        }))
+        .filter((d) => d.Ordem !== "" || d.Disciplina);
+    }
+    return rows
       .map((p) => ({ Ordem: toNum(p.Ordem), Docentes: String(p.Docentes || "").trim() }))
       .filter((p) => p.Docentes);
   }
+
+  // Aplica um mapeamento (do painel) e devolve os registros já no schema final.
+  function applyMapping(kind, rawRows, mapping) {
+    return coerce(kind, remapWithMapping(rawRows, kind, mapping));
+  }
+
+  // Auto (usado na leitura da planilha): sugere e aplica em um passo.
+  function normalizeDisciplinas(arr) {
+    if (!arr || !arr.length) return [];
+    return applyMapping("disc", arr, suggestMapping("disc", headersOf(arr)));
+  }
+  function normalizeProfessores(arr) {
+    if (!arr || !arr.length) return [];
+    return applyMapping("prof", arr, suggestMapping("prof", headersOf(arr)));
+  }
+
+  const fieldsOf = (kind) => SPECS[kind].map((s) => ({ key: s.key, label: s.label }));
 
   // ---- Rede (Apps Script) -----------------------------------------------
   async function fetchFromSheet() {
@@ -225,6 +251,10 @@
     objectsToCSV,
     normalizeDisciplinas,
     normalizeProfessores,
+    headersOf,
+    fieldsOf,
+    suggestMapping,
+    applyMapping,
     fetchFromSheet,
     saveAssignments,
   };

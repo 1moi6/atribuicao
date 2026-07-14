@@ -74,6 +74,25 @@
       </div>
     </div>
 
+    <!-- Modal de mapeamento de colunas -->
+    <div id="map-modal" class="modal-backdrop hidden">
+      <div class="modal modal-wide">
+        <h2 id="map-title">Mapear colunas</h2>
+        <p class="muted">
+          Confirme qual coluna do arquivo alimenta cada campo. O mapeamento automático já
+          vem selecionado — ajuste se necessário.
+        </p>
+        <div id="map-fields"></div>
+        <div class="modal-sep"></div>
+        <label>Prévia (primeiras linhas)</label>
+        <div class="table-wrap"><table class="data" id="map-preview"></table></div>
+        <div class="modal-actions">
+          <button id="map-cancel" class="btn">Cancelar</button>
+          <button id="map-apply" class="btn btn-primary">Aplicar mapeamento</button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast hidden"></div>
 
     <script src="vendor/xlsx.full.min.js"></script>
