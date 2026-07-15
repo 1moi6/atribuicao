@@ -289,17 +289,26 @@
       render();
     };
     bar.appendChild(sel);
-    if (state.selDiscOrdem) {
-      const d = discPorOrdem(state.selDiscOrdem);
-      const chip = el("span", "tag ok", "Prevendo: " + esc(d ? d.Disciplina : ""));
-      bar.appendChild(chip);
-      const clr = el("button", "btn", "Limpar prévia");
-      clr.onclick = () => {
-        state.selDiscOrdem = null;
-        render();
-      };
-      bar.appendChild(clr);
-    }
+
+    // Seletor de disciplina para simular/checar choque com a grade do professor.
+    bar.appendChild(el("label", null, "Simular disciplina:"));
+    const dsel = el("select");
+    dsel.style.maxWidth = "340px";
+    dsel.innerHTML =
+      '<option value="">— nenhuma —</option>' +
+      state.disciplinas
+        .slice()
+        .sort((a, b) => a.Ordem - b.Ordem)
+        .map(
+          (d) =>
+            `<option value="${d.Ordem}" ${state.selDiscOrdem === d.Ordem ? "selected" : ""}>${d.Ordem} - ${esc(d.Disciplina)}</option>`
+        )
+        .join("");
+    dsel.onchange = () => {
+      state.selDiscOrdem = dsel.value ? Number(dsel.value) : null;
+      render();
+    };
+    bar.appendChild(dsel);
     card.appendChild(bar);
 
     if (!state.selProf) {
@@ -314,6 +323,30 @@
       if (d && (d["Professor(a)"] || "") !== state.selProf) simulada = d;
     }
     const { grid, mapa, conflitos } = Logic.buildSchedule(disciplinasDoProf(state.selProf), simulada);
+
+    // Resumo do choque da disciplina simulada com a grade atual do professor.
+    if (state.selDiscOrdem) {
+      const d = discPorOrdem(state.selDiscOrdem);
+      const box = el("div", "row");
+      box.style.marginBottom = "12px";
+      if (d && (d["Professor(a)"] || "") === state.selProf) {
+        box.appendChild(el("span", "tag ok", "Já atribuída a este professor — " + esc(d.Disciplina)));
+      } else if (d) {
+        const profBlocks = new Set();
+        disciplinasDoProf(state.selProf).forEach((x) =>
+          Logic.blocosOcupados(x.Horario).forEach((b) => profBlocks.add(b))
+        );
+        const choque = [...Logic.blocosOcupados(d.Horario)].some((b) => profBlocks.has(b));
+        box.appendChild(
+          el(
+            "span",
+            "tag " + (choque ? "conf" : "ok"),
+            (choque ? "⚠ Choque de horário" : "✓ Sem choque") + " — " + esc(d.Disciplina)
+          )
+        );
+      }
+      card.appendChild(box);
+    }
 
     const wrap = el("div", "grade-wrap");
     const t = el("table", "grade");
