@@ -28,7 +28,6 @@
           Salvar <span id="dirty-count" class="badge hidden">0</span>
         </button>
         <button id="btn-export" class="icon-btn" title="Exportar">⭳</button>
-        <button id="btn-config" class="icon-btn" title="Configurar">⚙</button>
         <button id="btn-theme" class="icon-btn" title="Alternar tema">◐</button>
       </div>
     </header>
@@ -50,70 +49,6 @@
       <button data-exp="pdf">Relatório em PDF (imprimir)</button>
     </div>
 
-    <!-- Modal de configuração -->
-    <div id="config-modal" class="modal-backdrop hidden">
-      <div class="modal">
-        <h2>Configuração</h2>
-        <p class="muted">
-          Endpoint do Apps Script e Client ID do Google. Ficam salvos neste navegador
-          (você só preenche uma vez). Normalmente já vêm embutidos no site — este ⚙ é para
-          ajustar/testar. A leitura é pública; editar exige login autorizado.
-        </p>
-        <label>Endpoint do Apps Script (URL do Web App)</label>
-        <input id="cfg-endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec" />
-        <label>Client ID do Google (OAuth)</label>
-        <input id="cfg-clientid" type="text" placeholder="…apps.googleusercontent.com" />
-        <p class="muted" style="margin: 4px 0 0">
-          Necessário para o login. A edição é liberada só para os e-mails autorizados no
-          Apps Script; os demais acompanham em modo leitura.
-        </p>
-        <div class="modal-sep"></div>
-        <label>Ou importe uma planilha local:</label>
-        <div class="file-row">
-          <label class="file-btn file-btn-primary">Importar planilha da coordenação (.xlsx)
-            <input id="file-xlsx" type="file" accept=".xlsx,.xls" hidden />
-          </label>
-        </div>
-        <p class="muted" style="margin: 6px 0 0">
-          Reconhece as abas de disciplinas e de docentes; o mapeamento abre em seguida.
-        </p>
-        <div class="file-row" style="margin-top: 12px">
-          <label class="file-btn">Só disciplinas (CSV)
-            <input id="file-disc" type="file" accept=".csv" hidden />
-          </label>
-          <label class="file-btn">Só professores (CSV)
-            <input id="file-prof" type="file" accept=".csv" hidden />
-          </label>
-        </div>
-        <div class="modal-actions">
-          <button id="cfg-cancel" class="btn">Fechar</button>
-          <button id="cfg-save" class="btn btn-primary">Salvar config</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal de mapeamento de colunas -->
-    <div id="map-modal" class="modal-backdrop hidden">
-      <div class="modal modal-wide">
-        <h2 id="map-title">Mapear colunas</h2>
-        <p class="muted">
-          Confirme qual coluna do arquivo alimenta cada campo. O mapeamento automático já
-          vem selecionado — ajuste se necessário.
-        </p>
-        <div id="map-sheet-row" class="map-row hidden">
-          <div class="map-flabel">Aba (planilha)</div>
-          <select id="map-sheet"></select>
-        </div>
-        <div id="map-fields"></div>
-        <div class="modal-sep"></div>
-        <label>Prévia (primeiras linhas)</label>
-        <div class="table-wrap"><table class="data" id="map-preview"></table></div>
-        <div class="modal-actions">
-          <button id="map-cancel" class="btn">Cancelar</button>
-          <button id="map-apply" class="btn btn-primary">Aplicar mapeamento</button>
-        </div>
-      </div>
-    </div>
 
     <div id="toast" class="toast hidden"></div>
 

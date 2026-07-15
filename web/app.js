@@ -101,8 +101,6 @@
       if (!Store.getConfig().endpoint) return;
       if (document.hidden) return;
       if (state.dirty.size) return;
-      if (!$("#config-modal").classList.contains("hidden")) return;
-      if (!$("#map-modal").classList.contains("hidden")) return;
       carregar(true);
     }, REFRESH_MS);
   }
@@ -176,9 +174,9 @@
     const c = el("div", "empty-state");
     c.innerHTML =
       '<div class="big">📚</div><h2>Nenhum dado carregado</h2>' +
-      '<p class="muted">Configure o endpoint do Apps Script e recarregue, ou importe os CSVs em <b>⚙ Configurar</b>.</p>';
-    const b = el("button", "btn btn-primary", "Abrir configuração");
-    b.onclick = openConfig;
+      '<p class="muted">Não foi possível ler a planilha agora. Verifique a conexão e tente novamente.</p>';
+    const b = el("button", "btn btn-primary", "Recarregar");
+    b.onclick = () => carregar();
     c.appendChild(b);
     view.appendChild(c);
   }
@@ -589,161 +587,6 @@
     $("#user-email").textContent = state.userEmail + (state.isEditor ? " · editor" : " · leitura");
   }
 
-  // ---------- Config / modal ----------
-  function openConfig() {
-    const cfg = Store.getConfig();
-    $("#cfg-endpoint").value = cfg.endpoint;
-    $("#cfg-clientid").value = cfg.clientId;
-    $("#config-modal").classList.remove("hidden");
-  }
-  function closeConfig() {
-    $("#config-modal").classList.add("hidden");
-  }
-
-  // ---- Import com painel de mapeamento ----
-  // pending = { sheets:{nome:[rows]}, queue:[{kind,sheetName}], idx,
-  //             kind, sheetName, rawRows, headers, mapping, importados:[] }
-  let pending = null;
-
-  // CSV: um único arquivo → uma "aba" e um kind na fila.
-  function importCsv(file, kind) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      const rows = Store.csvToObjects(reader.result);
-      if (!rows.length) return toast("Arquivo vazio ou inválido.", "err");
-      startQueue({ "(arquivo)": rows }, [{ kind, sheetName: "(arquivo)" }]);
-    };
-    reader.readAsText(file, "utf-8");
-  }
-
-  // XLSX da coordenação: detecta abas de disciplinas e docentes.
-  function importXlsx(file) {
-    const reader = new FileReader();
-    reader.onload = () => {
-      let sheets;
-      try {
-        sheets = Store.readWorkbook(reader.result);
-      } catch (e) {
-        return toast("Não foi possível ler a planilha: " + e.message, "err");
-      }
-      if (!Object.keys(sheets).length) return toast("Planilha vazia.", "err");
-      const det = Store.detectSheets(sheets);
-      const queue = [];
-      if (det.disc) queue.push({ kind: "disc", sheetName: det.disc });
-      if (det.prof) queue.push({ kind: "prof", sheetName: det.prof });
-      if (!queue.length) return toast("Não reconheci abas de disciplinas nem de docentes.", "err");
-      startQueue(sheets, queue);
-    };
-    reader.readAsArrayBuffer(file);
-  }
-
-  function startQueue(sheets, queue) {
-    pending = { sheets, queue, idx: 0, importados: [] };
-    loadStep();
-    $("#map-modal").classList.remove("hidden");
-  }
-
-  function loadStep() {
-    const step = pending.queue[pending.idx];
-    pending.kind = step.kind;
-    setSheet(step.sheetName || Object.keys(pending.sheets)[0]);
-  }
-
-  function setSheet(name) {
-    pending.sheetName = name;
-    pending.rawRows = pending.sheets[name];
-    pending.headers = Store.headersOf(pending.rawRows);
-    pending.mapping = Store.suggestMapping(pending.kind, pending.headers);
-    renderMapping();
-  }
-
-  function renderMapping() {
-    const { kind, headers, mapping, sheets, queue, idx } = pending;
-    const kindLabel = kind === "disc" ? "Disciplinas" : "Professores";
-    const passo = queue.length > 1 ? ` (${idx + 1}/${queue.length})` : "";
-    $("#map-title").textContent = "Mapear colunas — " + kindLabel + passo;
-
-    // Seletor de aba (só quando há mais de uma aba na planilha).
-    const sheetNames = Object.keys(sheets);
-    const sheetRow = $("#map-sheet-row");
-    if (sheetNames.length > 1) {
-      sheetRow.classList.remove("hidden");
-      const ssel = $("#map-sheet");
-      ssel.innerHTML = sheetNames
-        .map((n) => `<option ${n === pending.sheetName ? "selected" : ""}>${esc(n)}</option>`)
-        .join("");
-      ssel.onchange = () => setSheet(ssel.value);
-    } else {
-      sheetRow.classList.add("hidden");
-    }
-
-    const box = $("#map-fields");
-    box.innerHTML = "";
-    Store.fieldsOf(kind).forEach((f) => {
-      const row = el("div", "map-row");
-      row.appendChild(el("div", "map-flabel", esc(f.label)));
-      const sel = el("select");
-      sel.innerHTML = ['<option value="">— (vazio) —</option>']
-        .concat(headers.map((h) => `<option ${mapping[f.key] === h ? "selected" : ""}>${esc(h)}</option>`))
-        .join("");
-      sel.onchange = () => {
-        pending.mapping[f.key] = sel.value || null;
-        renderMapPreview();
-      };
-      row.appendChild(sel);
-      box.appendChild(row);
-    });
-    renderMapPreview();
-  }
-
-  function renderMapPreview() {
-    const { kind, rawRows, mapping } = pending;
-    const fields = Store.fieldsOf(kind);
-    const sample = rawRows.slice(0, 3);
-    const t = $("#map-preview");
-    t.innerHTML =
-      "<tr>" + fields.map((f) => `<th>${esc(f.label)}</th>`).join("") + "</tr>" +
-      sample
-        .map(
-          (r) =>
-            "<tr>" +
-            fields.map((f) => `<td>${esc(mapping[f.key] ? r[mapping[f.key]] : "")}</td>`).join("") +
-            "</tr>"
-        )
-        .join("");
-  }
-
-  function aplicarMapeamento() {
-    if (!pending) return;
-    const { kind, rawRows, mapping } = pending;
-    const recs = Store.applyMapping(kind, rawRows, mapping);
-    if (kind === "disc") {
-      // Import começa a distribuição do zero: descarta pré-atribuições que
-      // vêm da planilha da coordenação (nomes soltos / primeiro nome).
-      recs.forEach((d) => (d["Professor(a)"] = ""));
-      state.disciplinas = recs;
-    } else {
-      state.professores = recs;
-    }
-    pending.importados.push(`${kind === "disc" ? "disciplinas" : "professores"} (${recs.length})`);
-
-    // Próxima etapa da fila (ex.: docentes após disciplinas).
-    if (pending.idx < pending.queue.length - 1) {
-      pending.idx++;
-      loadStep();
-      return;
-    }
-    const resumo = pending.importados.join(" e ");
-    pending = null;
-    state.dirty.clear();
-    $("#map-modal").classList.add("hidden");
-    closeConfig();
-    setStatus("local (arquivo)", "ro");
-    refreshChrome();
-    render();
-    toast("Importado: " + resumo + ".", "ok");
-  }
-
   // ---------- Toast ----------
   let toastTimer = null;
   function toast(msg, type) {
@@ -782,43 +625,8 @@
 
     $("#btn-reload").onclick = carregar;
     $("#btn-save").onclick = salvar;
-    $("#btn-config").onclick = openConfig;
     $("#btn-theme").onclick = toggleTheme;
-    $("#cfg-cancel").onclick = closeConfig;
     $("#btn-logout").onclick = logout;
-    $("#cfg-save").onclick = () => {
-      Store.setConfig($("#cfg-endpoint").value, $("#cfg-clientid").value);
-      closeConfig();
-      initGoogleSignIn();
-      refreshChrome();
-      if (Store.getConfig().endpoint) carregar();
-    };
-    $("#config-modal").onclick = (e) => {
-      if (e.target.id === "config-modal") closeConfig();
-    };
-    $("#file-xlsx").onchange = (e) => {
-      if (e.target.files[0]) importXlsx(e.target.files[0]);
-      e.target.value = "";
-    };
-    $("#file-disc").onchange = (e) => {
-      if (e.target.files[0]) importCsv(e.target.files[0], "disc");
-      e.target.value = "";
-    };
-    $("#file-prof").onchange = (e) => {
-      if (e.target.files[0]) importCsv(e.target.files[0], "prof");
-      e.target.value = "";
-    };
-    $("#map-cancel").onclick = () => {
-      pending = null;
-      $("#map-modal").classList.add("hidden");
-    };
-    $("#map-apply").onclick = aplicarMapeamento;
-    $("#map-modal").onclick = (e) => {
-      if (e.target.id === "map-modal") {
-        pending = null;
-        $("#map-modal").classList.add("hidden");
-      }
-    };
 
     // Export menu
     const menu = $("#export-menu");
