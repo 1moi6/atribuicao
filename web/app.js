@@ -279,6 +279,7 @@
   function renderGrade(view) {
     const card = el("div", "card");
     const bar = el("div", "row");
+    bar.style.marginBottom = "14px";
     bar.appendChild(el("label", null, "Professor:"));
     const sel = el("select");
     sel.style.maxWidth = "320px";
