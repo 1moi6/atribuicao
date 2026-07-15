@@ -21,7 +21,7 @@
   --danger: #c0392b;
   --danger-soft: #f7d7d2;
   --busy: #07519b;
-  --busy-2: #7d0404;
+  --busy-2: #c14b45; /* vermelho amenizado p/ conflitos */
 
   --shadow: 0 1px 2px rgba(16, 32, 51, 0.06), 0 8px 24px rgba(16, 32, 51, 0.06);
   --radius: 12px;
@@ -185,16 +185,22 @@ label { font-size: 12px; font-weight: 600; color: var(--text-soft); display: blo
 
 /* ---------- Grade (heatmap) ---------- */
 .grade-wrap { overflow-x: auto; }
-table.grade { border-collapse: collapse; font-size: 11px; width: 100%; min-width: 480px; }
+table.grade { border-collapse: collapse; font-size: 11px; width: 100%; min-width: 480px; table-layout: fixed; }
 table.grade th, table.grade td {
   border: 1px solid var(--border); padding: 3px 6px; text-align: center; height: 22px;
 }
+/* Coluna de horas estreita e fixa; os dias dividem o restante igualmente. */
+table.grade th:first-child, table.grade td.hora { width: 58px; }
 table.grade th { background: var(--surface-2); color: var(--text-soft); font-weight: 700; position: sticky; }
 table.grade td.hora { background: var(--surface-2); color: var(--text-mut); font-weight: 600; white-space: nowrap; }
 .cell-0 { background: var(--surface); }
 .cell-pausa { background: repeating-linear-gradient(45deg, var(--surface-2), var(--surface-2) 4px, var(--border) 4px, var(--border) 5px); }
 .cell-1 { background: var(--busy); color: #fff; }
 .cell-2 { background: var(--busy-2); color: #fff; font-weight: 800; }
+.cell-nome {
+  display: block; font-size: 9px; line-height: 1.15; font-weight: 700;
+  text-align: center; word-break: break-word; padding: 1px 0;
+}
 
 /* ---------- Matriz de conflitos ---------- */
 .matriz-wrap { overflow: auto; max-height: 640px; }

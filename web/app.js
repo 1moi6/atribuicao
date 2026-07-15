@@ -26,6 +26,13 @@
   // Abas visíveis no modo somente leitura (as demais são só para editores).
   const VIEWER_TABS = new Set(["grade", "distribuicao"]);
 
+  // Paleta da grade: tons verdes e azuis alternados para distinguir
+  // disciplinas diferentes numa mesma grade de professor.
+  const GRADE_CORES = [
+    "#449969", "#0054a8", "#3a7754", "#0147ad", "#2a6845",
+    "#11589a", "#40875f", "#0050cb", "#1e4831", "#3061a6",
+  ];
+
   const GOOGLE_G_SVG =
     '<svg width="16" height="16" viewBox="0 0 48 48" aria-hidden="true">' +
     '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>' +
@@ -357,24 +364,81 @@
       card.appendChild(box);
     }
 
+    // Cor estável por disciplina: cada disciplina da grade recebe um tom
+    // (verde/azul alternados) para diferenciá-las visualmente.
+    const corPorDisciplina = {};
+    {
+      const nomesDisc = new Set();
+      disciplinasDoProf(state.selProf).forEach((d) => nomesDisc.add(d.Disciplina || "Desconhecida"));
+      if (simulada) nomesDisc.add(simulada.Disciplina || "Desconhecida");
+      Array.from(nomesDisc)
+        .sort()
+        .forEach((nome, i) => {
+          corPorDisciplina[nome] = GRADE_CORES[i % GRADE_CORES.length];
+        });
+    }
+
     const wrap = el("div", "grade-wrap");
     const t = el("table", "grade");
     let head = "<tr><th>Hora</th>" + Logic.DAYS.map((d) => `<th>${d}</th>`).join("") + "</tr>";
+    // Exibe o nome no centro de cada bloco contíguo da disciplina:
+    // localiza a linha do meio de cada sequência (por dia) e marca-a com o rótulo.
+    const rotulo = {};
+    Logic.DAYS.forEach((dia) => {
+      const slots = Logic.TIME_SLOTS;
+      let i = 0;
+      while (i < slots.length) {
+        if (grid[slots[i]][dia] === 1) {
+          const nome = mapa[dia + "|" + slots[i]][0];
+          let j = i;
+          while (
+            j + 1 < slots.length &&
+            grid[slots[j + 1]][dia] === 1 &&
+            mapa[dia + "|" + slots[j + 1]][0] === nome
+          ) j++;
+          rotulo[dia + "|" + slots[Math.floor((i + j) / 2)]] = nome;
+          i = j + 1;
+        } else i++;
+      }
+    });
+
+    // Slot totalmente em pausa = sem aula em nenhum dia.
+    const slotTotalPausa = (hora) => Logic.DAYS.every((dia) => grid[hora][dia] < 0);
+
     let body = "";
-    Logic.TIME_SLOTS.forEach((hora) => {
+    const slots = Logic.TIME_SLOTS;
+    for (let i = 0; i < slots.length; i++) {
+      const hora = slots[i];
+      // Colapsa sequências de pausa total numa única barra fina.
+      if (slotTotalPausa(hora)) {
+        let j = i;
+        while (j + 1 < slots.length && slotTotalPausa(slots[j + 1])) j++;
+        const fim = slots[j + 1] || "23:30";
+        body +=
+          `<tr class="pausa-row" title="Intervalo ${hora}–${fim}"><td class="hora"></td>` +
+          Logic.DAYS.map(() => `<td class="cell-pausa"></td>`).join("") +
+          `</tr>`;
+        i = j;
+        continue;
+      }
       body += `<tr><td class="hora">${hora}</td>`;
       Logic.DAYS.forEach((dia) => {
         const v = grid[hora][dia];
         const nomes = mapa[dia + "|" + hora];
         const title = nomes.length ? ` title="${esc(nomes.join(", "))}"` : "";
-        let cls = "cell-0", txt = "";
+        let cls = "cell-0", txt = "", style = "";
         if (v < 0) cls = "cell-pausa";
-        else if (v === 1) { cls = "cell-1"; }
-        else if (v >= 2) { cls = "cell-2"; txt = v; }
-        body += `<td class="${cls}"${title}>${txt}</td>`;
+        else if (v === 1) {
+          cls = "cell-1";
+          const cor = corPorDisciplina[nomes[0]];
+          if (cor) style = ` style="background:${cor}"`;
+          const nome = rotulo[dia + "|" + hora];
+          if (nome) txt = `<span class="cell-nome">${esc(nome)}</span>`;
+        } else if (v >= 2) { cls = "cell-2"; txt = v; }
+        body += `<td class="${cls}"${style}${title}>${txt}</td>`;
       });
       body += "</tr>";
-    });
+    }
     t.innerHTML = head + body;
     wrap.appendChild(t);
     card.appendChild(wrap);
