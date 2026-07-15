@@ -23,6 +23,11 @@ Formatos aceitos (⚙ Configurar):
   O app **detecta automaticamente** qual aba é qual e abre o mapeamento em duas etapas.
 - **CSV** — separadamente, um para disciplinas e outro para professores.
 
+> Ao importar disciplinas, a **coluna de professor é zerada** — a distribuição começa do
+> zero (a planilha da coordenação chega com algumas pré-atribuições por primeiro nome, que
+> são descartadas). Para recuperar atribuições já feitas, use **↻ Recarregar** (Google Sheet),
+> não o import.
+
 As colunas são reconhecidas **pelo nome do cabeçalho**, de forma tolerante a maiúsculas,
 acentos e pontuação (`Horário`, `C.H.`, `Professor Responsável`, `N°`,
 `Docentes Por Ordem de Distribuição de Encargos…` etc.), e a ordem das colunas não importa.

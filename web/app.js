@@ -595,8 +595,14 @@
     if (!pending) return;
     const { kind, rawRows, mapping } = pending;
     const recs = Store.applyMapping(kind, rawRows, mapping);
-    if (kind === "disc") state.disciplinas = recs;
-    else state.professores = recs;
+    if (kind === "disc") {
+      // Import começa a distribuição do zero: descarta pré-atribuições que
+      // vêm da planilha da coordenação (nomes soltos / primeiro nome).
+      recs.forEach((d) => (d["Professor(a)"] = ""));
+      state.disciplinas = recs;
+    } else {
+      state.professores = recs;
+    }
     pending.importados.push(`${kind === "disc" ? "disciplinas" : "professores"} (${recs.length})`);
 
     // Próxima etapa da fila (ex.: docentes após disciplinas).
