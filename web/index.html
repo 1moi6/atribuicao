@@ -18,6 +18,11 @@
       </div>
       <div class="topbar-actions">
         <span id="status-conn" class="status-pill" title="Estado da conexão">—</span>
+        <div id="gsi-btn"></div>
+        <span id="user-chip" class="user-chip hidden">
+          <span id="user-email"></span>
+          <button id="btn-logout" class="linklike" title="Sair">sair</button>
+        </span>
         <button id="btn-reload" class="icon-btn" title="Recarregar do Drive">↻</button>
         <button id="btn-save" class="btn btn-primary" title="Salvar atribuições no Drive">
           Salvar <span id="dirty-count" class="badge hidden">0</span>
@@ -55,8 +60,12 @@
         </p>
         <label>Endpoint do Apps Script (URL do Web App)</label>
         <input id="cfg-endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec" />
-        <label>Token de escrita (coordenação)</label>
-        <input id="cfg-token" type="password" placeholder="opcional — deixe vazio para só leitura" />
+        <label>Client ID do Google (OAuth)</label>
+        <input id="cfg-clientid" type="text" placeholder="…apps.googleusercontent.com" />
+        <p class="muted" style="margin: 4px 0 0">
+          Necessário para o login. A edição é liberada só para os e-mails autorizados no
+          Apps Script; os demais acompanham em modo leitura.
+        </p>
         <div class="modal-sep"></div>
         <label>Ou importe uma planilha local:</label>
         <div class="file-row">
@@ -107,6 +116,7 @@
 
     <div id="toast" class="toast hidden"></div>
 
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="vendor/xlsx.full.min.js"></script>
     <script src="logic.js"></script>
     <script src="sheets.js"></script>

@@ -1,14 +1,15 @@
 /*
  * sheets.js — cliente do Apps Script Web App + parsing/serialização CSV.
- * Persistência: GET carrega { disciplinas, professores }; POST grava atribuições
- * (protegido por token). Config (endpoint + token) guardada em localStorage.
- * Exposto em window.Store.
+ * Persistência: GET carrega { disciplinas, professores } (leitura pública);
+ * POST grava atribuições autenticado por um ID token do Google (login), que o
+ * Apps Script verifica e confere contra a lista de editores. Config (endpoint +
+ * client ID do OAuth) guardada em localStorage. Exposto em window.Store.
  */
 (function () {
   "use strict";
 
   const LS_ENDPOINT = "atribuicao.endpoint";
-  const LS_TOKEN = "atribuicao.token";
+  const LS_CLIENTID = "atribuicao.clientId";
 
   const DISC_COLS = ["Ordem", "Curso", "Disciplina", "Horario", "CH", "Professor(a)"];
   const PROF_COLS = ["Ordem", "Docentes"];
@@ -16,12 +17,12 @@
   function getConfig() {
     return {
       endpoint: localStorage.getItem(LS_ENDPOINT) || "",
-      token: localStorage.getItem(LS_TOKEN) || "",
+      clientId: localStorage.getItem(LS_CLIENTID) || "",
     };
   }
-  function setConfig(endpoint, token) {
+  function setConfig(endpoint, clientId) {
     if (endpoint != null) localStorage.setItem(LS_ENDPOINT, endpoint.trim());
-    if (token != null) localStorage.setItem(LS_TOKEN, token.trim());
+    if (clientId != null) localStorage.setItem(LS_CLIENTID, clientId.trim());
   }
 
   // ---- CSV ---------------------------------------------------------------
@@ -277,19 +278,31 @@
     };
   }
 
-  // Grava uma lista de atribuições [{ordem, professor}]. Usa text/plain para
-  // evitar preflight CORS com o Apps Script.
-  async function saveAssignments(assignments) {
-    const { endpoint, token } = getConfig();
+  // POST em text/plain para evitar preflight CORS com o Apps Script.
+  async function postJson(body) {
+    const { endpoint } = getConfig();
     if (!endpoint) throw new Error("Endpoint do Apps Script não configurado.");
-    if (!token) throw new Error("Token de escrita não configurado.");
     const res = await fetch(endpoint, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify({ token, assignments }),
+      body: JSON.stringify(body),
     });
-    if (!res.ok) throw new Error("Falha ao salvar (HTTP " + res.status + ")");
-    const data = await res.json();
+    if (!res.ok) throw new Error("Falha de rede (HTTP " + res.status + ")");
+    return res.json();
+  }
+
+  // Descobre a identidade e a permissão de escrita do usuário logado.
+  // Retorna { email, canWrite }.
+  async function whoami(idToken) {
+    const data = await postJson({ idToken });
+    if (!data.ok) throw new Error(data.error || "Falha na autenticação.");
+    return { email: data.email || "", canWrite: !!data.canWrite };
+  }
+
+  // Grava uma lista de atribuições [{ordem, professor}] autenticado pelo login.
+  async function saveAssignments(assignments, idToken) {
+    if (!idToken) throw new Error("Faça login com o Google para salvar.");
+    const data = await postJson({ idToken, assignments });
     if (!data.ok) throw new Error(data.error || "Erro ao salvar.");
     return data;
   }
@@ -311,6 +324,7 @@
     readWorkbook,
     detectSheets,
     fetchFromSheet,
+    whoami,
     saveAssignments,
   };
 })();

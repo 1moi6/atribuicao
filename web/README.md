@@ -71,7 +71,17 @@ deployment › GitHub Actions** no repositório uma vez.
 | `app.js` | Estado, navegação e views |
 | `vendor/xlsx.full.min.js` | SheetJS (gera o `.xlsx`) |
 
+## Login e permissões
+
+A **leitura é pública** (qualquer pessoa acompanha a distribuição). A **edição exige
+login Google** e só é liberada para os e-mails autorizados no Apps Script
+(`ALLOWED_EMAILS`, ex.: `moiseis@gmail.com`) — verificado no servidor. Quem entrar com
+outra conta continua em somente leitura. Botão **Entrar com Google** na barra superior.
+
 ## Configuração (guardada no navegador)
 
 - `endpoint` — URL `/exec` do Web App.
-- `token` — token de escrita (só na máquina da coordenação; vazio = somente leitura).
+- `clientId` — Client ID do Google (OAuth), público, usado para o login.
+
+Passo a passo (planilha, Client ID, deploy) em
+[`../apps-script/README.md`](../apps-script/README.md).

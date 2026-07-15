@@ -17,6 +17,9 @@
     metaCH: Number(localStorage.getItem(LS_META) || 0),
     tab: "atribuicao",
     readOnly: true,
+    idToken: null,
+    userEmail: "",
+    isEditor: false,
   };
 
   const $ = (sel) => document.querySelector(sel);
@@ -74,20 +77,19 @@
 
   async function salvar() {
     if (!state.dirty.size) return toast("Nada a salvar.", "");
-    const cfg = Store.getConfig();
-    if (!cfg.token) return toast("Configure o token de escrita para salvar.", "err");
+    if (!state.isEditor) return toast("Faça login com uma conta autorizada para salvar.", "err");
     const assignments = Array.from(state.dirty).map((ordem) => ({
       ordem,
       professor: (discPorOrdem(ordem)["Professor(a)"] || ""),
     }));
     $("#btn-save").disabled = true;
     try {
-      await Store.saveAssignments(assignments);
+      await Store.saveAssignments(assignments, state.idToken);
       state.dirty.clear();
       refreshChrome();
       toast("Atribuições salvas no Drive.", "ok");
     } catch (e) {
-      toast("Falha ao salvar: " + e.message, "err");
+      toast("Falha ao salvar: " + e.message + " (se o login expirou, entre novamente)", "err");
     } finally {
       $("#btn-save").disabled = false;
     }
@@ -100,15 +102,14 @@
     p.className = "status-pill" + (cls ? " " + cls : "");
   }
   function refreshChrome() {
-    const cfg = Store.getConfig();
-    state.readOnly = !cfg.token;
+    state.readOnly = !state.isEditor;
     const dc = $("#dirty-count");
     dc.textContent = state.dirty.size;
     dc.classList.toggle("hidden", state.dirty.size === 0);
+    $("#btn-save").classList.toggle("hidden", !state.isEditor);
     if (state.disciplinas.length) {
-      setStatus(state.readOnly ? "somente leitura" : "conectado", state.readOnly ? "ro" : "ok");
+      setStatus(state.isEditor ? "editor" : "somente leitura", state.isEditor ? "ok" : "ro");
     }
-    // rótulo de semestre inferido do curso/dados (livre) — mantém genérico
     $("#semestre-label").textContent = "";
   }
 
@@ -467,11 +468,86 @@
     document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   }
 
+  // ---------- Login Google (GIS) ----------
+  function decodeJwt(t) {
+    try {
+      const p = t.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(decodeURIComponent(escape(atob(p))));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function whenGoogleReady(cb, tries) {
+    tries = tries || 0;
+    if (window.google && google.accounts && google.accounts.id) return cb();
+    if (tries > 60) return; // ~6s
+    setTimeout(() => whenGoogleReady(cb, tries + 1), 100);
+  }
+
+  function initGoogleSignIn() {
+    const { clientId } = Store.getConfig();
+    const btn = $("#gsi-btn");
+    btn.innerHTML = "";
+    if (!clientId) return;
+    whenGoogleReady(() => {
+      try {
+        google.accounts.id.initialize({ client_id: clientId, callback: onGoogleCredential });
+        google.accounts.id.renderButton(btn, {
+          type: "standard", theme: "outline", size: "medium", text: "signin_with", shape: "pill",
+        });
+      } catch (e) {
+        toast("Falha ao iniciar o login Google: " + e.message, "err");
+      }
+    });
+  }
+
+  async function onGoogleCredential(resp) {
+    state.idToken = resp.credential;
+    state.userEmail = decodeJwt(resp.credential).email || "";
+    state.isEditor = false;
+    try {
+      if (Store.getConfig().endpoint) {
+        const who = await Store.whoami(state.idToken);
+        state.userEmail = who.email || state.userEmail;
+        state.isEditor = who.canWrite;
+      }
+    } catch (e) {
+      toast("Login: " + e.message, "err");
+    }
+    updateAuthUI();
+    refreshChrome();
+    render();
+    toast(
+      (state.isEditor ? "Editor: " : "Somente leitura: ") + state.userEmail,
+      state.isEditor ? "ok" : ""
+    );
+  }
+
+  function logout() {
+    state.idToken = null;
+    state.userEmail = "";
+    state.isEditor = false;
+    try {
+      google.accounts.id.disableAutoSelect();
+    } catch (e) {}
+    updateAuthUI();
+    refreshChrome();
+    render();
+  }
+
+  function updateAuthUI() {
+    const signed = !!state.idToken;
+    $("#gsi-btn").classList.toggle("hidden", signed);
+    $("#user-chip").classList.toggle("hidden", !signed);
+    $("#user-email").textContent = state.userEmail + (state.isEditor ? " · editor" : " · leitura");
+  }
+
   // ---------- Config / modal ----------
   function openConfig() {
     const cfg = Store.getConfig();
     $("#cfg-endpoint").value = cfg.endpoint;
-    $("#cfg-token").value = cfg.token;
+    $("#cfg-clientid").value = cfg.clientId;
     $("#config-modal").classList.remove("hidden");
   }
   function closeConfig() {
@@ -663,9 +739,11 @@
     $("#btn-config").onclick = openConfig;
     $("#btn-theme").onclick = toggleTheme;
     $("#cfg-cancel").onclick = closeConfig;
+    $("#btn-logout").onclick = logout;
     $("#cfg-save").onclick = () => {
-      Store.setConfig($("#cfg-endpoint").value, $("#cfg-token").value);
+      Store.setConfig($("#cfg-endpoint").value, $("#cfg-clientid").value);
       closeConfig();
+      initGoogleSignIn();
       refreshChrome();
       if (Store.getConfig().endpoint) carregar();
     };
@@ -718,6 +796,8 @@
       };
     });
 
+    updateAuthUI();
+    initGoogleSignIn();
     refreshChrome();
     if (Store.getConfig().endpoint) carregar();
     else render();
