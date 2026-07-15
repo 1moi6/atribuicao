@@ -13,5 +13,5 @@
  */
 window.APP_CONFIG = {
   endpoint: "",
-  clientId: "",
+  clientId: "23226739408-vs77ncdednf9vh3ijjemf9s6vfc1ub1c.apps.googleusercontent.com",
 };
