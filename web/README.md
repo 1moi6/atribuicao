@@ -78,6 +78,10 @@ login Google** e só é liberada para os e-mails autorizados no Apps Script
 (`ALLOWED_EMAILS`, ex.: `moiseis@gmail.com`) — verificado no servidor. Quem entrar com
 outra conta continua em somente leitura. Botão **Entrar com Google** na barra superior.
 
+Quem está em modo leitura **acompanha ao vivo**: a página relê a planilha a cada 30s e se
+atualiza sozinha conforme o editor vai salvando (pausa quando há edição pendente, quando a
+aba está oculta ou um modal está aberto, e só re-renderiza quando algo muda de fato).
+
 ## Configuração (guardada no navegador)
 
 - `endpoint` — URL `/exec` do Web App.

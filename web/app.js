@@ -58,21 +58,50 @@
   }
 
   // ---------- Persistência ----------
-  async function carregar() {
-    setStatus("…", "");
+  let lastSig = "";
+  function sigOf(disc) {
+    return disc.length + "#" + disc.map((d) => d.Ordem + ":" + (d["Professor(a)"] || "")).join("|");
+  }
+
+  // carregar(silent): silent=true é a atualização automática (acompanhamento
+  // ao vivo) — não interrompe quem está editando e só re-renderiza se mudou.
+  async function carregar(silent) {
+    if (!silent) setStatus("…", "");
     try {
       const data = await Store.fetchFromSheet();
+      if (silent && state.dirty.size) return; // não atropela edição em andamento
+      const sig = sigOf(data.disciplinas);
+      const changed = sig !== lastSig;
+      if (silent && !changed) return; // nada novo salvo na planilha
       state.disciplinas = data.disciplinas;
       state.professores = data.professores;
+      lastSig = sig;
       state.dirty.clear();
       refreshChrome();
       render();
-      toast("Dados carregados do Drive.", "ok");
+      if (!silent) toast("Dados carregados do Drive.", "ok");
+      else toast("Distribuição atualizada.", "");
     } catch (e) {
-      setStatus("offline", "err");
-      toast("Não foi possível carregar: " + e.message, "err");
-      render();
+      if (!silent) {
+        setStatus("offline", "err");
+        toast("Não foi possível carregar: " + e.message, "err");
+        render();
+      }
     }
+  }
+
+  // Acompanhamento ao vivo: puxa a planilha periodicamente. Pausa quando há
+  // edição pendente, quando a aba está oculta ou um modal está aberto.
+  const REFRESH_MS = 30000;
+  function startAutoRefresh() {
+    setInterval(() => {
+      if (!Store.getConfig().endpoint) return;
+      if (document.hidden) return;
+      if (state.dirty.size) return;
+      if (!$("#config-modal").classList.contains("hidden")) return;
+      if (!$("#map-modal").classList.contains("hidden")) return;
+      carregar(true);
+    }, REFRESH_MS);
   }
 
   async function salvar() {
@@ -801,6 +830,7 @@
     refreshChrome();
     if (Store.getConfig().endpoint) carregar();
     else render();
+    startAutoRefresh();
   }
 
   document.addEventListener("DOMContentLoaded", init);
