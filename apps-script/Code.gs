@@ -13,10 +13,10 @@
  */
 
 // ==== Configuração ====
-var SPREADSHEET_ID = "COLE_AQUI_O_ID_DA_PLANILHA";
+var SPREADSHEET_ID = "1x-H5cIxhGhh-0fs2JGZ-AUifTzWKldbWiImEze8OjTM";
 // Client ID do OAuth (Web application) criado no Google Cloud — o mesmo usado no
 // site. Serve para conferir que o ID token foi emitido para este app.
-var OAUTH_CLIENT_ID = "COLE_AQUI_O_CLIENT_ID.apps.googleusercontent.com";
+var OAUTH_CLIENT_ID = "23226739408-vs77ncdednf9vh3ijjemf9s6vfc1ub1c.apps.googleusercontent.com";
 // E-mails que podem gravar (minúsculo). Os demais ficam em somente leitura.
 var ALLOWED_EMAILS = ["moiseis@gmail.com"];
 var SHEET_DISCIPLINAS = "Disciplinas";
