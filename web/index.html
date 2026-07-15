@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Distribuição de Disciplinas — DEMAT/UFMT</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%93%9A%3C/text%3E%3C/svg%3E" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark">📚</span>
+        <div class="brand-text">
+          <h1>Distribuição de Disciplinas</h1>
+          <span class="brand-sub">DEMAT · UFMT <span id="semestre-label"></span></span>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span id="status-conn" class="status-pill" title="Estado da conexão">—</span>
+        <div id="gsi-btn"></div>
+        <span id="user-chip" class="user-chip hidden">
+          <span id="user-email"></span>
+          <button id="btn-logout" class="linklike" title="Sair">sair</button>
+        </span>
+        <button id="btn-reload" class="icon-btn" title="Recarregar do Drive">↻</button>
+        <button id="btn-save" class="btn btn-primary" title="Salvar atribuições no Drive">
+          Salvar <span id="dirty-count" class="badge hidden">0</span>
+        </button>
+        <button id="btn-export" class="icon-btn" title="Exportar">⭳</button>
+        <button id="btn-theme" class="icon-btn" title="Alternar tema">◐</button>
+      </div>
+    </header>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="atribuicao">Atribuição</button>
+      <button class="tab" data-tab="grade">Grade</button>
+      <button class="tab" data-tab="conflitos">Conflitos</button>
+      <button class="tab" data-tab="dashboard">Dashboard</button>
+      <button class="tab" data-tab="distribuicao">Distribuição</button>
+    </nav>
+
+    <main id="view" class="view"></main>
+
+    <!-- Menu de exportação -->
+    <div id="export-menu" class="popmenu hidden">
+      <button data-exp="xlsx">Planilha de encargos (.xlsx)</button>
+      <button data-exp="csv">CSV de trabalho (.csv)</button>
+      <button data-exp="pdf">Relatório em PDF (imprimir)</button>
+    </div>
+
+
+    <div id="toast" class="toast hidden"></div>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="config.js"></script>
+    <script src="vendor/xlsx.full.min.js"></script>
+    <script src="logic.js"></script>
+    <script src="sheets.js"></script>
+    <script src="export.js"></script>
+    <script src="app.js"></script>
+  </body>
+</html>
