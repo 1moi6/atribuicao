@@ -12,6 +12,6 @@
  * protegida pelo login Google verificado no servidor (Apps Script).
  */
 window.APP_CONFIG = {
-  endpoint: "",
+  endpoint: "https://script.google.com/macros/s/AKfycbyFt0ucs1XOjnwGDKbXVWQNGmx5FGui6nh8syaSzKXLFcNWUahe1luSkO_KEwS5c-uV/exec",
   clientId: "23226739408-vs77ncdednf9vh3ijjemf9s6vfc1ub1c.apps.googleusercontent.com",
 };
