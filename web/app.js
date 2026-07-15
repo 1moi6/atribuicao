@@ -22,6 +22,9 @@
     isEditor: false,
   };
 
+  // Abas visíveis no modo somente leitura (as demais são só para editores).
+  const VIEWER_TABS = new Set(["grade", "distribuicao"]);
+
   const $ = (sel) => document.querySelector(sel);
   const el = (tag, cls, html) => {
     const e = document.createElement(tag);
@@ -137,10 +140,12 @@
     dc.classList.toggle("hidden", state.dirty.size === 0);
     $("#btn-save").classList.toggle("hidden", !state.isEditor);
 
-    // A aba Atribuição (edição) só existe para editores. Viewers acompanham.
-    const atribTab = document.querySelector('.tab[data-tab="atribuicao"]');
-    if (atribTab) atribTab.classList.toggle("hidden", !state.isEditor);
-    if (!state.isEditor && state.tab === "atribuicao") {
+    // No modo leitura, viewers só acompanham Grade e Distribuição.
+    document.querySelectorAll(".tab").forEach((t) => {
+      const editorOnly = !VIEWER_TABS.has(t.dataset.tab);
+      t.classList.toggle("hidden", editorOnly && !state.isEditor);
+    });
+    if (!state.isEditor && !VIEWER_TABS.has(state.tab)) {
       state.tab = "distribuicao";
       setActiveTab(state.tab);
     }
@@ -156,8 +161,8 @@
     const view = $("#view");
     view.innerHTML = "";
     if (!state.disciplinas.length) return renderEmpty(view);
-    // Salvaguarda: edição só para editores.
-    if (state.tab === "atribuicao" && !state.isEditor) state.tab = "distribuicao";
+    // Salvaguarda: fora as abas de leitura, o resto é só para editores.
+    if (!state.isEditor && !VIEWER_TABS.has(state.tab)) state.tab = "distribuicao";
     ({
       atribuicao: renderAtribuicao,
       grade: renderGrade,
