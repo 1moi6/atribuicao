@@ -116,6 +116,9 @@ body {
 .linklike { border: none; background: none; color: var(--gold); cursor: pointer; font: inherit; font-weight: 700; padding: 0; }
 .linklike:hover { text-decoration: underline; }
 #gsi-btn { display: inline-flex; }
+.login-btn { background: #fff; color: #3c4043; border: 1px solid #dadce0; font-weight: 600; }
+.login-btn:hover { border-color: var(--gold); background: #fff; }
+.login-btn svg { display: block; }
 
 /* ---------- Tabs ---------- */
 .tabs {
