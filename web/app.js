@@ -136,6 +136,15 @@
     dc.textContent = state.dirty.size;
     dc.classList.toggle("hidden", state.dirty.size === 0);
     $("#btn-save").classList.toggle("hidden", !state.isEditor);
+
+    // A aba Atribuição (edição) só existe para editores. Viewers acompanham.
+    const atribTab = document.querySelector('.tab[data-tab="atribuicao"]');
+    if (atribTab) atribTab.classList.toggle("hidden", !state.isEditor);
+    if (!state.isEditor && state.tab === "atribuicao") {
+      state.tab = "distribuicao";
+      setActiveTab(state.tab);
+    }
+
     if (state.disciplinas.length) {
       setStatus(state.isEditor ? "editor" : "somente leitura", state.isEditor ? "ok" : "ro");
     }
@@ -147,13 +156,15 @@
     const view = $("#view");
     view.innerHTML = "";
     if (!state.disciplinas.length) return renderEmpty(view);
+    // Salvaguarda: edição só para editores.
+    if (state.tab === "atribuicao" && !state.isEditor) state.tab = "distribuicao";
     ({
       atribuicao: renderAtribuicao,
       grade: renderGrade,
       conflitos: renderConflitos,
       dashboard: renderDashboard,
       distribuicao: renderDistribuicao,
-    }[state.tab] || renderAtribuicao)(view);
+    }[state.tab] || renderDistribuicao)(view);
   }
 
   function renderEmpty(view) {
