@@ -15,9 +15,11 @@
   const PROF_COLS = ["Ordem", "Docentes"];
 
   function getConfig() {
+    // localStorage (override do ⚙) tem prioridade; senão, o embutido (config.js).
+    const baked = (typeof window !== "undefined" && window.APP_CONFIG) || {};
     return {
-      endpoint: localStorage.getItem(LS_ENDPOINT) || "",
-      clientId: localStorage.getItem(LS_CLIENTID) || "",
+      endpoint: localStorage.getItem(LS_ENDPOINT) || baked.endpoint || "",
+      clientId: localStorage.getItem(LS_CLIENTID) || baked.clientId || "",
     };
   }
   function setConfig(endpoint, clientId) {

@@ -82,9 +82,19 @@ Quem está em modo leitura **acompanha ao vivo**: a página relê a planilha a c
 atualiza sozinha conforme o editor vai salvando (pausa quando há edição pendente, quando a
 aba está oculta ou um modal está aberto, e só re-renderiza quando algo muda de fato).
 
-## Configuração (guardada no navegador)
+## Configuração
 
-- `endpoint` — URL `/exec` do Web App.
+Há dois lugares (o do navegador sobrescreve o embutido):
+
+- **`config.js`** (recomendado) — `endpoint` e `clientId` embutidos no deploy. Preencha
+  uma vez e faça commit: qualquer visitante já carrega os dados (leitura pública) sem
+  configurar nada; o editor só faz login. Nenhum dos dois é segredo.
+- **⚙ no app** — sobrescreve os valores **neste navegador** (via `localStorage`),
+  útil para testes/override. Persiste entre recarregamentos até limpar os dados do navegador.
+
+Valores:
+
+- `endpoint` — URL `/exec` do Web App do Apps Script.
 - `clientId` — Client ID do Google (OAuth), público, usado para o login.
 
 Passo a passo (planilha, Client ID, deploy) em

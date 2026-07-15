@@ -55,8 +55,9 @@
       <div class="modal">
         <h2>Configuração</h2>
         <p class="muted">
-          Endereço do Web App (Apps Script) e token de escrita. O token fica só neste
-          navegador e é exigido apenas para salvar. Sem token, o modo é somente leitura.
+          Endpoint do Apps Script e Client ID do Google. Ficam salvos neste navegador
+          (você só preenche uma vez). Normalmente já vêm embutidos no site — este ⚙ é para
+          ajustar/testar. A leitura é pública; editar exige login autorizado.
         </p>
         <label>Endpoint do Apps Script (URL do Web App)</label>
         <input id="cfg-endpoint" type="url" placeholder="https://script.google.com/macros/s/…/exec" />
@@ -117,6 +118,7 @@
     <div id="toast" class="toast hidden"></div>
 
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="config.js"></script>
     <script src="vendor/xlsx.full.min.js"></script>
     <script src="logic.js"></script>
     <script src="sheets.js"></script>
