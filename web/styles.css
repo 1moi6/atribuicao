@@ -111,6 +111,10 @@ body {
 .status-pill.ok { color: var(--ok); border-color: var(--ok); }
 .status-pill.ro { color: var(--warn); border-color: var(--warn); }
 .status-pill.err { color: var(--danger); border-color: var(--danger); }
+.save-state { font-size: 12px; font-weight: 700; color: var(--text-mut); display: inline-flex; align-items: center; gap: 5px; }
+.save-state.saving { color: var(--text-mut); }
+.save-state.saved { color: var(--ok); }
+.save-state.err { color: var(--danger); }
 .user-chip { display: inline-flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 600;
   padding: 5px 10px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-soft); }
 .linklike { border: none; background: none; color: var(--gold); cursor: pointer; font: inherit; font-weight: 700; padding: 0; }

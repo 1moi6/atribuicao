@@ -66,6 +66,7 @@
     state.dirty.add(Number(ordem));
     refreshChrome();
     render();
+    scheduleSave();
   }
   function desatribuir(ordem) {
     const d = discPorOrdem(ordem);
@@ -74,6 +75,7 @@
     state.dirty.add(Number(ordem));
     refreshChrome();
     render();
+    scheduleSave();
   }
 
   // ---------- Persistência ----------
@@ -121,23 +123,61 @@
     }, REFRESH_MS);
   }
 
-  async function salvar() {
-    if (!state.dirty.size) return toast("Nada a salvar.", "");
-    if (!state.isEditor) return toast("Faça login com uma conta autorizada para salvar.", "err");
-    const assignments = Array.from(state.dirty).map((ordem) => ({
+  // Salvamento automático: junta as edições feitas em sequência (debounce) e
+  // grava em segundo plano, sem travar a interface. O botão Salvar continua
+  // como recurso manual — útil para tentar de novo se um auto-save falhar.
+  const AUTOSAVE_MS = 1200;
+  let saveTimer = null;
+  let saving = false;
+
+  function scheduleSave() {
+    if (!state.isEditor || !state.dirty.size) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => salvar({ auto: true }), AUTOSAVE_MS);
+  }
+
+  // Indicador discreto ao lado do botão: "Salvando…" / "Salvo" / "Erro".
+  let saveStateTimer = null;
+  function setSaveState(kind) {
+    const el = $("#save-state");
+    if (!el) return;
+    clearTimeout(saveStateTimer);
+    const map = { saving: "Salvando…", saved: "Salvo ✓", err: "Erro ao salvar" };
+    if (!kind) return el.classList.add("hidden");
+    el.textContent = map[kind] || "";
+    el.className = "save-state " + kind;
+    if (kind === "saved") saveStateTimer = setTimeout(() => setSaveState(null), 2000);
+  }
+
+  async function salvar(opts) {
+    const auto = !!(opts && opts.auto);
+    if (!state.dirty.size) return auto || toast("Nada a salvar.", "");
+    if (!state.isEditor) return auto || toast("Faça login com uma conta autorizada para salvar.", "err");
+    if (saving) return scheduleSave(); // já há um envio em curso; grava o resto depois
+
+    // Snapshot do que será enviado: edições que chegarem durante o request
+    // permanecem pendentes e vão no próximo ciclo (não são apagadas por engano).
+    const ordens = Array.from(state.dirty);
+    const assignments = ordens.map((ordem) => ({
       ordem,
       professor: (discPorOrdem(ordem)["Professor(a)"] || ""),
     }));
-    $("#btn-save").disabled = true;
+
+    saving = true;
+    clearTimeout(saveTimer);
+    setSaveState("saving");
     try {
       await Store.saveAssignments(assignments, state.idToken);
-      state.dirty.clear();
+      ordens.forEach((o) => state.dirty.delete(o)); // remove só o que foi salvo
       refreshChrome();
-      toast("Atribuições salvas no Drive.", "ok");
+      setSaveState("saved");
+      if (!auto) toast("Atribuições salvas no Drive.", "ok");
     } catch (e) {
-      toast("Falha ao salvar: " + e.message + " (se o login expirou, entre novamente)", "err");
+      setSaveState("err");
+      toast("Falha ao salvar: " + e.message + " (clique em Salvar para tentar de novo; se o login expirou, entre novamente)", "err");
     } finally {
-      $("#btn-save").disabled = false;
+      saving = false;
+      if (state.dirty.size) scheduleSave(); // edições surgidas durante o envio
     }
   }
 
@@ -744,7 +784,7 @@
     });
 
     $("#btn-reload").onclick = carregar;
-    $("#btn-save").onclick = salvar;
+    $("#btn-save").onclick = () => salvar();
     $("#btn-theme").onclick = toggleTheme;
     $("#btn-logout").onclick = logout;
 
