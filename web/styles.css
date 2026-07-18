@@ -146,6 +146,12 @@ body {
   border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
 }
 .card + .card { margin-top: 16px; }
+/* Dentro do grid-2 os cards são irmãos lado a lado: o gap já dá o espaçamento,
+   então anula a margem-topo de .card + .card que desalinharia a 2ª coluna. */
+.grid-2 > .card + .card { margin-top: 0; }
+/* Alinha a 1ª linha de conteúdo das colunas, seja h2 ou p (evita a margem-topo
+   padrão do <p>). */
+.card > :first-child { margin-top: 0; }
 .card h2 { margin: 0 0 12px; font-size: 15px; color: var(--text); }
 .grid-2 { display: grid; grid-template-columns: 320px 1fr; gap: 16px; align-items: start; }
 @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
