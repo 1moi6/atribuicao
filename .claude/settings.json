@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node -e 'const fs=require(\"fs\"),cp=require(\"child_process\");let d={};try{d=JSON.parse(fs.readFileSync(0,\"utf8\"))}catch(e){process.exit(0)}const f=(d.tool_input&&d.tool_input.file_path)||(d.tool_response&&d.tool_response.filePath)||\"\";if(!/\\/web\\/.*\\.js$/.test(f)||/\\/web\\/vendor\\//.test(f)||!fs.existsSync(f))process.exit(0);const r=cp.spawnSync(\"node\",[\"--check\",f],{encoding:\"utf8\"});if(r.status!==0)process.stdout.write(JSON.stringify({decision:\"block\",reason:\"node --check falhou em \"+f+\":\\n\"+(r.stderr||\"\")}))'",
+            "statusMessage": "node --check em web/*.js"
+          }
+        ]
+      }
+    ]
+  }
+}
