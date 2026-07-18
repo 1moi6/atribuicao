@@ -21,7 +21,7 @@ Sirva por **HTTP** (não `file://`) e use a **porta 8099**: é a origem registra
 
 ## Deploy
 
-GitHub Pages via `.github/workflows/pages.yml`, automático a cada push em `main` que toque `web/**`. Site: `https://1moi6.github.io/ditribuicao/`. `origin` = `https://github.com/1moi6/atribuicao.git` (repo renomeado; a pasta local `ditribuicao` está com o nome antigo).
+GitHub Pages via `.github/workflows/pages.yml`, automático a cada push em `main` que toque `web/**`. Site: `https://1moi6.github.io/atribuicao/`. `origin` = `https://github.com/1moi6/atribuicao.git` (repo renomeado de `ditribuicao`; a pasta local ainda usa o nome antigo, mas a URL do Pages segue o nome atual do repo — `/atribuicao/`).
 
 Fluxo de trabalho: feature na branch `web-atribuicao` → PR → merge em `main`.
 
